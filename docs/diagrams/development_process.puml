@@ -1,0 +1,80 @@
+@startuml development_process
+start
+partition "Data Selection and Preprocessing" {
+    :Exploratory Analysis;
+    ' Put notes immediately AFTER the activity step
+    note left
+        **Input:**
+        - /path/to/dataset
+    end note
+    note right
+        **Output:**
+        - Signal-Background ratio
+        - Distribution histograms
+    end note
+}
+partition "Tuning Process" {
+    :Arquitecture defiition;
+    note left
+        **Input:**
+        - Layers
+        - Number of neurons
+    end note
+    fork
+        partition "PTQ" {
+            :Train model;
+            :Quantize model;
+        }
+    fork again
+        partition "QAT" {
+            :Train quantized model;
+
+        }
+    endfork
+    :Compare performance difference;
+    note left
+        **Input:**
+        - Model files
+            - No quantization
+            - PTQ
+            - QAT
+    end note
+    note right
+        **Output:**
+        - Metrics: ROC AUC, SP, Pd, Fr
+    end note
+}
+partition "FPGA Implementation" {
+    fork
+        :Implementation with hls4ml;
+        note left
+            **Input:**
+            - Model files
+            - HLS4ML config
+        end note
+        note right
+            **Output:**
+            - VHDL code
+        end note
+    fork again
+        :Implementation with Igo VHDL;
+        note right
+            **Output:**
+            - VHDL code
+        end note
+    endfork
+    :Compare FPGA models;
+    note left
+        **Input:**
+        - VHDL files
+    end note
+    note right
+        **Output:**
+        - Latency
+        - Resource usage
+        - Power Consumption
+    end note
+}
+
+stop
+@enduml
