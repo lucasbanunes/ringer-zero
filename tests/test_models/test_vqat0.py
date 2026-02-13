@@ -3,13 +3,13 @@ from pathlib import Path
 from ringer_zero.models.vqat0 import run_training
 
 
-def test_run_training(tmp_path: Path):
+def test_run_training(tmp_path: Path, test_data_dir: Path):
     output_dir = tmp_path / 'output' / 'vqat0_test'
     run_training(
-        datapath='/media/lucasbanunes/KINGSTON/data/cern_data/isabela/qt_data_mc21_5m/2sigma_h5/mc21_13p6TeV.Zee.JF17.2sigma.5M.et5_eta0.h5',
+        datapath=str(test_data_dir / 'test_data.hdf5'),
         et=5,
         eta=0,
-        ref='/media/lucasbanunes/KINGSTON/data/cern_data/isabela/Models_Scripts/references/mc21_13p6TeV.Run3_v1.40bins.ref.json',
+        ref=str(test_data_dir / 'test_ref.json'),
         output_dir=str(output_dir),
         tag='vqat0-test',
         batch_size=1024,

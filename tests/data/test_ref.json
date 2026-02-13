@@ -1,0 +1,1698 @@
+[
+    [
+        {
+            "tight": {
+                "det": {
+                    "total": 232913,
+                    "passed": 232060
+                },
+                "fake": {
+                    "total": 1946524,
+                    "passed": 435731
+                }
+            },
+            "medium": {
+                "det": {
+                    "total": 232913,
+                    "passed": 232106
+                },
+                "fake": {
+                    "total": 1946524,
+                    "passed": 449170
+                }
+            },
+            "loose": {
+                "det": {
+                    "total": 232913,
+                    "passed": 232102
+                },
+                "fake": {
+                    "total": 1946524,
+                    "passed": 448182
+                }
+            },
+            "vloose": {
+                "det": {
+                    "total": 232913,
+                    "passed": 232150
+                },
+                "fake": {
+                    "total": 1946524,
+                    "passed": 464211
+                }
+            }
+        },
+        {
+            "tight": {
+                "det": {
+                    "total": 73327,
+                    "passed": 72911
+                },
+                "fake": {
+                    "total": 1912796,
+                    "passed": 464002
+                }
+            },
+            "medium": {
+                "det": {
+                    "total": 73327,
+                    "passed": 72926
+                },
+                "fake": {
+                    "total": 1912796,
+                    "passed": 474462
+                }
+            },
+            "loose": {
+                "det": {
+                    "total": 73327,
+                    "passed": 72952
+                },
+                "fake": {
+                    "total": 1912796,
+                    "passed": 494841
+                }
+            },
+            "vloose": {
+                "det": {
+                    "total": 73327,
+                    "passed": 72961
+                },
+                "fake": {
+                    "total": 1912796,
+                    "passed": 504975
+                }
+            }
+        },
+        {
+            "tight": {
+                "det": {
+                    "total": 3205,
+                    "passed": 3010
+                },
+                "fake": {
+                    "total": 936912,
+                    "passed": 131386
+                }
+            },
+            "medium": {
+                "det": {
+                    "total": 3205,
+                    "passed": 3042
+                },
+                "fake": {
+                    "total": 936912,
+                    "passed": 143329
+                }
+            },
+            "loose": {
+                "det": {
+                    "total": 3205,
+                    "passed": 3043
+                },
+                "fake": {
+                    "total": 936912,
+                    "passed": 144110
+                }
+            },
+            "vloose": {
+                "det": {
+                    "total": 3205,
+                    "passed": 3056
+                },
+                "fake": {
+                    "total": 936912,
+                    "passed": 157041
+                }
+            }
+        },
+        {
+            "tight": {
+                "det": {
+                    "total": 54069,
+                    "passed": 52272
+                },
+                "fake": {
+                    "total": 1927127,
+                    "passed": 207715
+                }
+            },
+            "medium": {
+                "det": {
+                    "total": 54069,
+                    "passed": 52467
+                },
+                "fake": {
+                    "total": 1927127,
+                    "passed": 218300
+                }
+            },
+            "loose": {
+                "det": {
+                    "total": 54069,
+                    "passed": 52535
+                },
+                "fake": {
+                    "total": 1927127,
+                    "passed": 223883
+                }
+            },
+            "vloose": {
+                "det": {
+                    "total": 54069,
+                    "passed": 52593
+                },
+                "fake": {
+                    "total": 1927127,
+                    "passed": 226966
+                }
+            }
+        },
+        {
+            "tight": {
+                "det": {
+                    "total": 3694,
+                    "passed": 3625
+                },
+                "fake": {
+                    "total": 530772,
+                    "passed": 65917
+                }
+            },
+            "medium": {
+                "det": {
+                    "total": 3694,
+                    "passed": 3631
+                },
+                "fake": {
+                    "total": 530772,
+                    "passed": 68158
+                }
+            },
+            "loose": {
+                "det": {
+                    "total": 3694,
+                    "passed": 3632
+                },
+                "fake": {
+                    "total": 530772,
+                    "passed": 68653
+                }
+            },
+            "vloose": {
+                "det": {
+                    "total": 3694,
+                    "passed": 3632
+                },
+                "fake": {
+                    "total": 530772,
+                    "passed": 68687
+                }
+            }
+        }
+    ],
+    [
+        {
+            "tight": {
+                "det": {
+                    "total": 132921,
+                    "passed": 132518
+                },
+                "fake": {
+                    "total": 1963194,
+                    "passed": 530493
+                }
+            },
+            "medium": {
+                "det": {
+                    "total": 132921,
+                    "passed": 132526
+                },
+                "fake": {
+                    "total": 1963194,
+                    "passed": 547578
+                }
+            },
+            "loose": {
+                "det": {
+                    "total": 132921,
+                    "passed": 132530
+                },
+                "fake": {
+                    "total": 1963194,
+                    "passed": 556101
+                }
+            },
+            "vloose": {
+                "det": {
+                    "total": 132921,
+                    "passed": 132530
+                },
+                "fake": {
+                    "total": 1963194,
+                    "passed": 557466
+                }
+            }
+        },
+        {
+            "tight": {
+                "det": {
+                    "total": 51488,
+                    "passed": 51243
+                },
+                "fake": {
+                    "total": 1939077,
+                    "passed": 456128
+                }
+            },
+            "medium": {
+                "det": {
+                    "total": 51488,
+                    "passed": 51243
+                },
+                "fake": {
+                    "total": 1939077,
+                    "passed": 456128
+                }
+            },
+            "loose": {
+                "det": {
+                    "total": 51488,
+                    "passed": 51240
+                },
+                "fake": {
+                    "total": 1939077,
+                    "passed": 448309
+                }
+            },
+            "vloose": {
+                "det": {
+                    "total": 51488,
+                    "passed": 51250
+                },
+                "fake": {
+                    "total": 1939077,
+                    "passed": 463446
+                }
+            }
+        },
+        {
+            "tight": {
+                "det": {
+                    "total": 3039,
+                    "passed": 2856
+                },
+                "fake": {
+                    "total": 1492017,
+                    "passed": 164794
+                }
+            },
+            "medium": {
+                "det": {
+                    "total": 3039,
+                    "passed": 2856
+                },
+                "fake": {
+                    "total": 1492017,
+                    "passed": 165295
+                }
+            },
+            "loose": {
+                "det": {
+                    "total": 3039,
+                    "passed": 2857
+                },
+                "fake": {
+                    "total": 1492017,
+                    "passed": 165646
+                }
+            },
+            "vloose": {
+                "det": {
+                    "total": 3039,
+                    "passed": 2864
+                },
+                "fake": {
+                    "total": 1492017,
+                    "passed": 171130
+                }
+            }
+        },
+        {
+            "tight": {
+                "det": {
+                    "total": 31538,
+                    "passed": 30724
+                },
+                "fake": {
+                    "total": 1956239,
+                    "passed": 147982
+                }
+            },
+            "medium": {
+                "det": {
+                    "total": 31538,
+                    "passed": 30807
+                },
+                "fake": {
+                    "total": 1956239,
+                    "passed": 157614
+                }
+            },
+            "loose": {
+                "det": {
+                    "total": 31538,
+                    "passed": 30831
+                },
+                "fake": {
+                    "total": 1956239,
+                    "passed": 159144
+                }
+            },
+            "vloose": {
+                "det": {
+                    "total": 31538,
+                    "passed": 30863
+                },
+                "fake": {
+                    "total": 1956239,
+                    "passed": 163497
+                }
+            }
+        },
+        {
+            "tight": {
+                "det": {
+                    "total": 2541,
+                    "passed": 2515
+                },
+                "fake": {
+                    "total": 773678,
+                    "passed": 74926
+                }
+            },
+            "medium": {
+                "det": {
+                    "total": 2541,
+                    "passed": 2515
+                },
+                "fake": {
+                    "total": 773678,
+                    "passed": 74987
+                }
+            },
+            "loose": {
+                "det": {
+                    "total": 2541,
+                    "passed": 2515
+                },
+                "fake": {
+                    "total": 773678,
+                    "passed": 74987
+                }
+            },
+            "vloose": {
+                "det": {
+                    "total": 2541,
+                    "passed": 2515
+                },
+                "fake": {
+                    "total": 773678,
+                    "passed": 74987
+                }
+            }
+        }
+    ],
+    [
+        {
+            "tight": {
+                "det": {
+                    "total": 64972,
+                    "passed": 64678
+                },
+                "fake": {
+                    "total": 1958472,
+                    "passed": 374198
+                }
+            },
+            "medium": {
+                "det": {
+                    "total": 64972,
+                    "passed": 64680
+                },
+                "fake": {
+                    "total": 1958472,
+                    "passed": 375776
+                }
+            },
+            "loose": {
+                "det": {
+                    "total": 64972,
+                    "passed": 64680
+                },
+                "fake": {
+                    "total": 1958472,
+                    "passed": 375776
+                }
+            },
+            "vloose": {
+                "det": {
+                    "total": 64972,
+                    "passed": 64680
+                },
+                "fake": {
+                    "total": 1958472,
+                    "passed": 376406
+                }
+            }
+        },
+        {
+            "tight": {
+                "det": {
+                    "total": 26101,
+                    "passed": 26007
+                },
+                "fake": {
+                    "total": 1951489,
+                    "passed": 561188
+                }
+            },
+            "medium": {
+                "det": {
+                    "total": 26101,
+                    "passed": 26017
+                },
+                "fake": {
+                    "total": 1951489,
+                    "passed": 582851
+                }
+            },
+            "loose": {
+                "det": {
+                    "total": 26101,
+                    "passed": 26017
+                },
+                "fake": {
+                    "total": 1951489,
+                    "passed": 582851
+                }
+            },
+            "vloose": {
+                "det": {
+                    "total": 26101,
+                    "passed": 26017
+                },
+                "fake": {
+                    "total": 1951489,
+                    "passed": 582851
+                }
+            }
+        },
+        {
+            "tight": {
+                "det": {
+                    "total": 2047,
+                    "passed": 1683
+                },
+                "fake": {
+                    "total": 1893649,
+                    "passed": 112954
+                }
+            },
+            "medium": {
+                "det": {
+                    "total": 2047,
+                    "passed": 1683
+                },
+                "fake": {
+                    "total": 1893649,
+                    "passed": 112954
+                }
+            },
+            "loose": {
+                "det": {
+                    "total": 2047,
+                    "passed": 1683
+                },
+                "fake": {
+                    "total": 1893649,
+                    "passed": 112954
+                }
+            },
+            "vloose": {
+                "det": {
+                    "total": 2047,
+                    "passed": 1688
+                },
+                "fake": {
+                    "total": 1893649,
+                    "passed": 115985
+                }
+            }
+        },
+        {
+            "tight": {
+                "det": {
+                    "total": 16418,
+                    "passed": 16118
+                },
+                "fake": {
+                    "total": 1961881,
+                    "passed": 161982
+                }
+            },
+            "medium": {
+                "det": {
+                    "total": 16418,
+                    "passed": 16136
+                },
+                "fake": {
+                    "total": 1961881,
+                    "passed": 166163
+                }
+            },
+            "loose": {
+                "det": {
+                    "total": 16418,
+                    "passed": 16138
+                },
+                "fake": {
+                    "total": 1961881,
+                    "passed": 167203
+                }
+            },
+            "vloose": {
+                "det": {
+                    "total": 16418,
+                    "passed": 16158
+                },
+                "fake": {
+                    "total": 1961881,
+                    "passed": 170857
+                }
+            }
+        },
+        {
+            "tight": {
+                "det": {
+                    "total": 1408,
+                    "passed": 1400
+                },
+                "fake": {
+                    "total": 672130,
+                    "passed": 55292
+                }
+            },
+            "medium": {
+                "det": {
+                    "total": 1408,
+                    "passed": 1400
+                },
+                "fake": {
+                    "total": 672130,
+                    "passed": 55292
+                }
+            },
+            "loose": {
+                "det": {
+                    "total": 1408,
+                    "passed": 1400
+                },
+                "fake": {
+                    "total": 672130,
+                    "passed": 55292
+                }
+            },
+            "vloose": {
+                "det": {
+                    "total": 1408,
+                    "passed": 1400
+                },
+                "fake": {
+                    "total": 672130,
+                    "passed": 55292
+                }
+            }
+        }
+    ],
+    [
+        {
+            "tight": {
+                "det": {
+                    "total": 387922,
+                    "passed": 385620
+                },
+                "fake": {
+                    "total": 1960648,
+                    "passed": 101260
+                }
+            },
+            "medium": {
+                "det": {
+                    "total": 387922,
+                    "passed": 386540
+                },
+                "fake": {
+                    "total": 1960648,
+                    "passed": 141013
+                }
+            },
+            "loose": {
+                "det": {
+                    "total": 387922,
+                    "passed": 386520
+                },
+                "fake": {
+                    "total": 1960648,
+                    "passed": 139522
+                }
+            },
+            "vloose": {
+                "det": {
+                    "total": 387922,
+                    "passed": 387006
+                },
+                "fake": {
+                    "total": 1960648,
+                    "passed": 220870
+                }
+            }
+        },
+        {
+            "tight": {
+                "det": {
+                    "total": 245647,
+                    "passed": 244196
+                },
+                "fake": {
+                    "total": 1952533,
+                    "passed": 157707
+                }
+            },
+            "medium": {
+                "det": {
+                    "total": 245647,
+                    "passed": 244746
+                },
+                "fake": {
+                    "total": 1952533,
+                    "passed": 206594
+                }
+            },
+            "loose": {
+                "det": {
+                    "total": 245647,
+                    "passed": 244598
+                },
+                "fake": {
+                    "total": 1952533,
+                    "passed": 188985
+                }
+            },
+            "vloose": {
+                "det": {
+                    "total": 245647,
+                    "passed": 244944
+                },
+                "fake": {
+                    "total": 1952533,
+                    "passed": 257690
+                }
+            }
+        },
+        {
+            "tight": {
+                "det": {
+                    "total": 82801,
+                    "passed": 81351
+                },
+                "fake": {
+                    "total": 897621,
+                    "passed": 97624
+                }
+            },
+            "medium": {
+                "det": {
+                    "total": 82801,
+                    "passed": 81588
+                },
+                "fake": {
+                    "total": 897621,
+                    "passed": 106633
+                }
+            },
+            "loose": {
+                "det": {
+                    "total": 82801,
+                    "passed": 81842
+                },
+                "fake": {
+                    "total": 897621,
+                    "passed": 118501
+                }
+            },
+            "vloose": {
+                "det": {
+                    "total": 82801,
+                    "passed": 82228
+                },
+                "fake": {
+                    "total": 897621,
+                    "passed": 156676
+                }
+            }
+        },
+        {
+            "tight": {
+                "det": {
+                    "total": 350188,
+                    "passed": 347056
+                },
+                "fake": {
+                    "total": 1959057,
+                    "passed": 119122
+                }
+            },
+            "medium": {
+                "det": {
+                    "total": 350188,
+                    "passed": 348204
+                },
+                "fake": {
+                    "total": 1959057,
+                    "passed": 142708
+                }
+            },
+            "loose": {
+                "det": {
+                    "total": 350188,
+                    "passed": 347659
+                },
+                "fake": {
+                    "total": 1959057,
+                    "passed": 128892
+                }
+            },
+            "vloose": {
+                "det": {
+                    "total": 350188,
+                    "passed": 348396
+                },
+                "fake": {
+                    "total": 1959057,
+                    "passed": 149851
+                }
+            }
+        },
+        {
+            "tight": {
+                "det": {
+                    "total": 33180,
+                    "passed": 32926
+                },
+                "fake": {
+                    "total": 356013,
+                    "passed": 33576
+                }
+            },
+            "medium": {
+                "det": {
+                    "total": 33180,
+                    "passed": 33060
+                },
+                "fake": {
+                    "total": 356013,
+                    "passed": 41516
+                }
+            },
+            "loose": {
+                "det": {
+                    "total": 33180,
+                    "passed": 33030
+                },
+                "fake": {
+                    "total": 356013,
+                    "passed": 38960
+                }
+            },
+            "vloose": {
+                "det": {
+                    "total": 33180,
+                    "passed": 33098
+                },
+                "fake": {
+                    "total": 356013,
+                    "passed": 47096
+                }
+            }
+        }
+    ],
+    [
+        {
+            "tight": {
+                "det": {
+                    "total": 1659344,
+                    "passed": 1651574
+                },
+                "fake": {
+                    "total": 1967693,
+                    "passed": 55791
+                }
+            },
+            "medium": {
+                "det": {
+                    "total": 1659344,
+                    "passed": 1655269
+                },
+                "fake": {
+                    "total": 1967693,
+                    "passed": 73951
+                }
+            },
+            "loose": {
+                "det": {
+                    "total": 1659344,
+                    "passed": 1655797
+                },
+                "fake": {
+                    "total": 1967693,
+                    "passed": 79337
+                }
+            },
+            "vloose": {
+                "det": {
+                    "total": 1659344,
+                    "passed": 1657259
+                },
+                "fake": {
+                    "total": 1967693,
+                    "passed": 105537
+                }
+            }
+        },
+        {
+            "tight": {
+                "det": {
+                    "total": 1561786,
+                    "passed": 1554814
+                },
+                "fake": {
+                    "total": 1960211,
+                    "passed": 92541
+                }
+            },
+            "medium": {
+                "det": {
+                    "total": 1561786,
+                    "passed": 1557571
+                },
+                "fake": {
+                    "total": 1960211,
+                    "passed": 114242
+                }
+            },
+            "loose": {
+                "det": {
+                    "total": 1561786,
+                    "passed": 1557742
+                },
+                "fake": {
+                    "total": 1960211,
+                    "passed": 116200
+                }
+            },
+            "vloose": {
+                "det": {
+                    "total": 1561786,
+                    "passed": 1559413
+                },
+                "fake": {
+                    "total": 1960211,
+                    "passed": 150431
+                }
+            }
+        },
+        {
+            "tight": {
+                "det": {
+                    "total": 478121,
+                    "passed": 463981
+                },
+                "fake": {
+                    "total": 575312,
+                    "passed": 33832
+                }
+            },
+            "medium": {
+                "det": {
+                    "total": 478121,
+                    "passed": 469602
+                },
+                "fake": {
+                    "total": 575312,
+                    "passed": 43076
+                }
+            },
+            "loose": {
+                "det": {
+                    "total": 478121,
+                    "passed": 470264
+                },
+                "fake": {
+                    "total": 575312,
+                    "passed": 44691
+                }
+            },
+            "vloose": {
+                "det": {
+                    "total": 478121,
+                    "passed": 472831
+                },
+                "fake": {
+                    "total": 575312,
+                    "passed": 52902
+                }
+            }
+        },
+        {
+            "tight": {
+                "det": {
+                    "total": 1634658,
+                    "passed": 1622043
+                },
+                "fake": {
+                    "total": 1965346,
+                    "passed": 79683
+                }
+            },
+            "medium": {
+                "det": {
+                    "total": 1634658,
+                    "passed": 1627008
+                },
+                "fake": {
+                    "total": 1965346,
+                    "passed": 94710
+                }
+            },
+            "loose": {
+                "det": {
+                    "total": 1634658,
+                    "passed": 1627051
+                },
+                "fake": {
+                    "total": 1965346,
+                    "passed": 94925
+                }
+            },
+            "vloose": {
+                "det": {
+                    "total": 1634658,
+                    "passed": 1629558
+                },
+                "fake": {
+                    "total": 1965346,
+                    "passed": 110158
+                }
+            }
+        },
+        {
+            "tight": {
+                "det": {
+                    "total": 159854,
+                    "passed": 158544
+                },
+                "fake": {
+                    "total": 259814,
+                    "passed": 16456
+                }
+            },
+            "medium": {
+                "det": {
+                    "total": 159854,
+                    "passed": 159066
+                },
+                "fake": {
+                    "total": 259814,
+                    "passed": 19143
+                }
+            },
+            "loose": {
+                "det": {
+                    "total": 159854,
+                    "passed": 158915
+                },
+                "fake": {
+                    "total": 259814,
+                    "passed": 18148
+                }
+            },
+            "vloose": {
+                "det": {
+                    "total": 159854,
+                    "passed": 159271
+                },
+                "fake": {
+                    "total": 259814,
+                    "passed": 20952
+                }
+            }
+        }
+    ],
+    [
+        {
+            "tight": {
+                "det": {
+                    "total": 1767690,
+                    "passed": 1761691
+                },
+                "fake": {
+                    "total": 820051,
+                    "passed": 14899
+                }
+            },
+            "medium": {
+                "det": {
+                    "total": 1767690,
+                    "passed": 1764936
+                },
+                "fake": {
+                    "total": 820051,
+                    "passed": 19815
+                }
+            },
+            "loose": {
+                "det": {
+                    "total": 1767690,
+                    "passed": 1765520
+                },
+                "fake": {
+                    "total": 820051,
+                    "passed": 21586
+                }
+            },
+            "vloose": {
+                "det": {
+                    "total": 1767690,
+                    "passed": 1766515
+                },
+                "fake": {
+                    "total": 820051,
+                    "passed": 27165
+                }
+            }
+        },
+        {
+            "tight": {
+                "det": {
+                    "total": 1752452,
+                    "passed": 1747980
+                },
+                "fake": {
+                    "total": 626792,
+                    "passed": 19896
+                }
+            },
+            "medium": {
+                "det": {
+                    "total": 1752452,
+                    "passed": 1750000
+                },
+                "fake": {
+                    "total": 626792,
+                    "passed": 24637
+                }
+            },
+            "loose": {
+                "det": {
+                    "total": 1752452,
+                    "passed": 1750290
+                },
+                "fake": {
+                    "total": 626792,
+                    "passed": 25671
+                }
+            },
+            "vloose": {
+                "det": {
+                    "total": 1752452,
+                    "passed": 1751162
+                },
+                "fake": {
+                    "total": 626792,
+                    "passed": 31338
+                }
+            }
+        },
+        {
+            "tight": {
+                "det": {
+                    "total": 1151059,
+                    "passed": 1135328
+                },
+                "fake": {
+                    "total": 165113,
+                    "passed": 8776
+                }
+            },
+            "medium": {
+                "det": {
+                    "total": 1151059,
+                    "passed": 1139011
+                },
+                "fake": {
+                    "total": 165113,
+                    "passed": 9867
+                }
+            },
+            "loose": {
+                "det": {
+                    "total": 1151059,
+                    "passed": 1141760
+                },
+                "fake": {
+                    "total": 165113,
+                    "passed": 10991
+                }
+            },
+            "vloose": {
+                "det": {
+                    "total": 1151059,
+                    "passed": 1145858
+                },
+                "fake": {
+                    "total": 165113,
+                    "passed": 13908
+                }
+            }
+        },
+        {
+            "tight": {
+                "det": {
+                    "total": 1685978,
+                    "passed": 1676835
+                },
+                "fake": {
+                    "total": 752168,
+                    "passed": 22005
+                }
+            },
+            "medium": {
+                "det": {
+                    "total": 1685978,
+                    "passed": 1680983
+                },
+                "fake": {
+                    "total": 752168,
+                    "passed": 26555
+                }
+            },
+            "loose": {
+                "det": {
+                    "total": 1685978,
+                    "passed": 1681532
+                },
+                "fake": {
+                    "total": 752168,
+                    "passed": 27518
+                }
+            },
+            "vloose": {
+                "det": {
+                    "total": 1685978,
+                    "passed": 1683226
+                },
+                "fake": {
+                    "total": 752168,
+                    "passed": 31806
+                }
+            }
+        },
+        {
+            "tight": {
+                "det": {
+                    "total": 340631,
+                    "passed": 338258
+                },
+                "fake": {
+                    "total": 69973,
+                    "passed": 2723
+                }
+            },
+            "medium": {
+                "det": {
+                    "total": 340631,
+                    "passed": 338872
+                },
+                "fake": {
+                    "total": 69973,
+                    "passed": 2961
+                }
+            },
+            "loose": {
+                "det": {
+                    "total": 340631,
+                    "passed": 338829
+                },
+                "fake": {
+                    "total": 69973,
+                    "passed": 2929
+                }
+            },
+            "vloose": {
+                "det": {
+                    "total": 340631,
+                    "passed": 339535
+                },
+                "fake": {
+                    "total": 69973,
+                    "passed": 3349
+                }
+            }
+        }
+    ],
+    [
+        {
+            "tight": {
+                "det": {
+                    "total": 1810818,
+                    "passed": 1806296
+                },
+                "fake": {
+                    "total": 306642,
+                    "passed": 3872
+                }
+            },
+            "medium": {
+                "det": {
+                    "total": 1810818,
+                    "passed": 1808763
+                },
+                "fake": {
+                    "total": 306642,
+                    "passed": 5106
+                }
+            },
+            "loose": {
+                "det": {
+                    "total": 1810818,
+                    "passed": 1809562
+                },
+                "fake": {
+                    "total": 306642,
+                    "passed": 6091
+                }
+            },
+            "vloose": {
+                "det": {
+                    "total": 1810818,
+                    "passed": 1810118
+                },
+                "fake": {
+                    "total": 306642,
+                    "passed": 7605
+                }
+            }
+        },
+        {
+            "tight": {
+                "det": {
+                    "total": 1820279,
+                    "passed": 1817026
+                },
+                "fake": {
+                    "total": 235538,
+                    "passed": 5391
+                }
+            },
+            "medium": {
+                "det": {
+                    "total": 1820279,
+                    "passed": 1818617
+                },
+                "fake": {
+                    "total": 235538,
+                    "passed": 6662
+                }
+            },
+            "loose": {
+                "det": {
+                    "total": 1820279,
+                    "passed": 1818935
+                },
+                "fake": {
+                    "total": 235538,
+                    "passed": 7111
+                }
+            },
+            "vloose": {
+                "det": {
+                    "total": 1820279,
+                    "passed": 1819396
+                },
+                "fake": {
+                    "total": 235538,
+                    "passed": 8317
+                }
+            }
+        },
+        {
+            "tight": {
+                "det": {
+                    "total": 992666,
+                    "passed": 980941
+                },
+                "fake": {
+                    "total": 63156,
+                    "passed": 2716
+                }
+            },
+            "medium": {
+                "det": {
+                    "total": 992666,
+                    "passed": 986031
+                },
+                "fake": {
+                    "total": 63156,
+                    "passed": 3465
+                }
+            },
+            "loose": {
+                "det": {
+                    "total": 992666,
+                    "passed": 986631
+                },
+                "fake": {
+                    "total": 63156,
+                    "passed": 3607
+                }
+            },
+            "vloose": {
+                "det": {
+                    "total": 992666,
+                    "passed": 988885
+                },
+                "fake": {
+                    "total": 63156,
+                    "passed": 4375
+                }
+            }
+        },
+        {
+            "tight": {
+                "det": {
+                    "total": 1773587,
+                    "passed": 1764013
+                },
+                "fake": {
+                    "total": 277412,
+                    "passed": 5810
+                }
+            },
+            "medium": {
+                "det": {
+                    "total": 1773587,
+                    "passed": 1767768
+                },
+                "fake": {
+                    "total": 277412,
+                    "passed": 6695
+                }
+            },
+            "loose": {
+                "det": {
+                    "total": 1773587,
+                    "passed": 1769299
+                },
+                "fake": {
+                    "total": 277412,
+                    "passed": 7345
+                }
+            },
+            "vloose": {
+                "det": {
+                    "total": 1773587,
+                    "passed": 1764493
+                },
+                "fake": {
+                    "total": 277412,
+                    "passed": 5886
+                }
+            }
+        },
+        {
+            "tight": {
+                "det": {
+                    "total": 371729,
+                    "passed": 369498
+                },
+                "fake": {
+                    "total": 25517,
+                    "passed": 768
+                }
+            },
+            "medium": {
+                "det": {
+                    "total": 371729,
+                    "passed": 369655
+                },
+                "fake": {
+                    "total": 25517,
+                    "passed": 773
+                }
+            },
+            "loose": {
+                "det": {
+                    "total": 371729,
+                    "passed": 370185
+                },
+                "fake": {
+                    "total": 25517,
+                    "passed": 840
+                }
+            },
+            "vloose": {
+                "det": {
+                    "total": 371729,
+                    "passed": 370278
+                },
+                "fake": {
+                    "total": 25517,
+                    "passed": 849
+                }
+            }
+        }
+    ],
+    [
+        {
+            "tight": {
+                "det": {
+                    "total": 1862230,
+                    "passed": 1859444
+                },
+                "fake": {
+                    "total": 306686,
+                    "passed": 3575
+                }
+            },
+            "medium": {
+                "det": {
+                    "total": 1862230,
+                    "passed": 1860705
+                },
+                "fake": {
+                    "total": 306686,
+                    "passed": 4620
+                }
+            },
+            "loose": {
+                "det": {
+                    "total": 1862230,
+                    "passed": 1861184
+                },
+                "fake": {
+                    "total": 306686,
+                    "passed": 5465
+                }
+            },
+            "vloose": {
+                "det": {
+                    "total": 1862230,
+                    "passed": 1861660
+                },
+                "fake": {
+                    "total": 306686,
+                    "passed": 7478
+                }
+            }
+        },
+        {
+            "tight": {
+                "det": {
+                    "total": 1885352,
+                    "passed": 1882238
+                },
+                "fake": {
+                    "total": 240644,
+                    "passed": 4398
+                }
+            },
+            "medium": {
+                "det": {
+                    "total": 1885352,
+                    "passed": 1883655
+                },
+                "fake": {
+                    "total": 240644,
+                    "passed": 5390
+                }
+            },
+            "loose": {
+                "det": {
+                    "total": 1885352,
+                    "passed": 1883944
+                },
+                "fake": {
+                    "total": 240644,
+                    "passed": 5785
+                }
+            },
+            "vloose": {
+                "det": {
+                    "total": 1885352,
+                    "passed": 1884436
+                },
+                "fake": {
+                    "total": 240644,
+                    "passed": 6884
+                }
+            }
+        },
+        {
+            "tight": {
+                "det": {
+                    "total": 384772,
+                    "passed": 383093
+                },
+                "fake": {
+                    "total": 65781,
+                    "passed": 3833
+                }
+            },
+            "medium": {
+                "det": {
+                    "total": 384772,
+                    "passed": 382628
+                },
+                "fake": {
+                    "total": 65781,
+                    "passed": 3494
+                }
+            },
+            "loose": {
+                "det": {
+                    "total": 384772,
+                    "passed": 382947
+                },
+                "fake": {
+                    "total": 65781,
+                    "passed": 3710
+                }
+            },
+            "vloose": {
+                "det": {
+                    "total": 384772,
+                    "passed": 383550
+                },
+                "fake": {
+                    "total": 65781,
+                    "passed": 4430
+                }
+            }
+        },
+        {
+            "tight": {
+                "det": {
+                    "total": 1619765,
+                    "passed": 1613557
+                },
+                "fake": {
+                    "total": 267053,
+                    "passed": 5333
+                }
+            },
+            "medium": {
+                "det": {
+                    "total": 1619765,
+                    "passed": 1616369
+                },
+                "fake": {
+                    "total": 267053,
+                    "passed": 6503
+                }
+            },
+            "loose": {
+                "det": {
+                    "total": 1619765,
+                    "passed": 1617059
+                },
+                "fake": {
+                    "total": 267053,
+                    "passed": 6964
+                }
+            },
+            "vloose": {
+                "det": {
+                    "total": 1619765,
+                    "passed": 1618104
+                },
+                "fake": {
+                    "total": 267053,
+                    "passed": 8035
+                }
+            }
+        },
+        {
+            "tight": {
+                "det": {
+                    "total": 120000,
+                    "passed": 119662
+                },
+                "fake": {
+                    "total": 22441,
+                    "passed": 753
+                }
+            },
+            "medium": {
+                "det": {
+                    "total": 120000,
+                    "passed": 119786
+                },
+                "fake": {
+                    "total": 22441,
+                    "passed": 835
+                }
+            },
+            "loose": {
+                "det": {
+                    "total": 120000,
+                    "passed": 119815
+                },
+                "fake": {
+                    "total": 22441,
+                    "passed": 863
+                }
+            },
+            "vloose": {
+                "det": {
+                    "total": 120000,
+                    "passed": 119870
+                },
+                "fake": {
+                    "total": 22441,
+                    "passed": 979
+                }
+            }
+        }
+    ]
+]
