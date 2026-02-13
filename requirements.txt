@@ -1,6 +1,11 @@
 colorlog==6.10.1
+duckdb==1.4.4
 HGQ2==0.1.6
 jupyterlab==4.5.3
+onnx==1.20.1
 QKeras==0.9.0
 pandas==3.0.0
+pyarrow==23.0.0
+tables==3.10.2
 tensorflow==2.20.0
+# tf2onnx==1.16.1 Installing tfwonnx gives cannot import name 'runtime_version' from 'google.protobuf'
