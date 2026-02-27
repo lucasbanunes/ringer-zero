@@ -80,7 +80,7 @@ def training(
     start = datetime.now()
     # y_hat = f(x)
     history = model.fit(data, target,
-                        epochs=5000 if dry_run else 5000,
+                        epochs=1 if dry_run else 5000,
                         batch_size=check_batch_size(target, batch_size),
                         verbose=verbose,
                         validation_data=(data_val, target_val),
