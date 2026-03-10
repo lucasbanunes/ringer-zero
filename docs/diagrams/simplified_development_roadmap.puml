@@ -1,0 +1,69 @@
+@startuml simplified_development_roadmap
+start
+partition "Tuning Process" {
+    :Arquitecture definition;
+    ' note left
+    '     **Input:**
+    '     - Layers
+    '     - Number of neurons
+    ' end note
+    fork
+        partition "PTQ" {
+            :Floating point training;
+            :Quantize model;
+        }
+    fork again
+        partition "QAT" {
+            :Train quantized model;
+
+        }
+    end fork
+    :Compare performance difference;
+    ' note left
+    '     **Input:**
+    '     - Models
+    '         - No quantization
+    '         - PTQ
+    '         - QAT
+    '     - Dataset
+    ' end note
+    ' note right
+    '     **Output:**
+    '     - Metrics: ROC AUC, SP, Pd, Fr
+    ' end note
+}
+partition "FPGA Implementation" {
+    fork
+        :Implementation with hls4ml;
+        ' note left
+        '     **Input:**
+        '     - Model files
+        '     - HLS4ML config
+        ' end note
+        ' note right
+        '     **Output:**
+        '     - Implementation Code
+        ' end note
+    fork again
+        :Implementation with System Verilog;
+        ' note right
+        '     **Output:**
+        '     - Implementation Code
+        ' end note
+    end fork
+    :Compare FPGA models;
+    ' note left
+    '     **Input:**
+    '     - Implementation files
+    ' end note
+    ' note right
+    '     **Output:**
+    '     - Latency
+    '     - Resource usage
+    '     - Power Consumption
+    '     - Performance metrics
+    ' end note
+}
+
+stop
+@enduml
