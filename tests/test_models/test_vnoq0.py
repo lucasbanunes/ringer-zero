@@ -6,10 +6,10 @@ from ringer_zero.models.vnoq0 import run_training
 def test_run_training(tmp_path: Path, test_data_dir: Path):
     output_dir = tmp_path / 'output' / 'vnoq0_test'
     run_training(
-        datapath=str(test_data_dir / 'test_data.hdf5'),
+        datapath=(test_data_dir / 'test_data.hdf5'),
         et=5,
         eta=0,
-        ref=str(test_data_dir / 'test_ref.json'),
+        ref=(test_data_dir / 'test_ref.json'),
         output_dir=str(output_dir),
         tag='vnoq0-test',
         batch_size=1024,

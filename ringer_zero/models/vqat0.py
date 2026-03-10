@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-from itertools import product
 from pathlib import Path
 from typing import Annotated
 import pandas as pd
@@ -142,24 +141,24 @@ def run_training(
             '--tag'
         )
     ],
+    sort: Annotated[
+        int,
+        typer.Option(
+            '--sort'
+        )
+    ],
+    init: Annotated[
+        int,
+        typer.Option(
+            '--init'
+        )
+    ],
     batch_size: Annotated[
         int,
         typer.Option(
             '--batch-size'
         )
     ] = 1024,
-    sorts: Annotated[
-        int,
-        typer.Option(
-            '--sorts'
-        )
-    ] = 10,
-    inits: Annotated[
-        int,
-        typer.Option(
-            '--inits'
-        )
-    ] = 5,
     seed: Annotated[
         int,
         typer.Option(
@@ -173,31 +172,23 @@ def run_training(
         )
     ] = False
 ):
-    if dry_run:
-        sorts_range = [0]
-        init_range = [0]
-    else:
-        sorts_range = range(sorts)
-        init_range = range(inits)
-
-    for i, (sort, init) in enumerate(product(sorts_range, init_range)):
-        logger.info(
-            f'{i} - Running sort {sort} and init {init}'
+    logger.info(
+            f'Running sort {sort} and init {init}'
         )
-        training(
-            sort=sort,
-            init=init,
-            seed=seed,
-            tag=tag,
-            loss='binary_crossentropy',
-            verbose=True,
-            ref=str(ref),
-            model=get_model(),
-            datapath=str(datapath),
-            et=et,
-            eta=eta,
-            output_dir=output_dir,
-            data_loader=data_loader,
-            batch_size=batch_size,
-            dry_run=dry_run
-        )
+    training(
+        sort=sort,
+        init=init,
+        seed=seed,
+        tag=tag,
+        loss='binary_crossentropy',
+        verbose=True,
+        ref=str(ref),
+        model=get_model(),
+        datapath=str(datapath),
+        et=et,
+        eta=eta,
+        output_dir=str(output_dir),
+        data_loader=data_loader,
+        batch_size=batch_size,
+        dry_run=dry_run
+    )
