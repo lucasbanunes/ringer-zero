@@ -1,4 +1,4 @@
-@startuml development_process
+@startuml development_roadmap
 start
 partition "Data Selection and Preprocessing" {
     :Exploratory Analysis;
@@ -14,30 +14,38 @@ partition "Data Selection and Preprocessing" {
     end note
 }
 partition "Tuning Process" {
-    :Arquitecture defiition;
+    :Arquitecture definition;
     note left
         **Input:**
         - Layers
         - Number of neurons
     end note
-    fork
-        partition "PTQ" {
-            :Train model;
-            :Quantize model;
-        }
-    fork again
-        partition "QAT" {
-            :Train quantized model;
+    partition "Training Step" {
+        fork
+            partition "PTQ" {
+                :Floating point training;
+                :Quantize model;
+            }
+        fork again
+            partition "QAT" {
+                :Train quantized model;
 
-        }
-    endfork
+            }
+        end fork
+    }
+    note right
+        **Output:**
+        - Model files
+        - Training history
+    end note
     :Compare performance difference;
     note left
         **Input:**
-        - Model files
+        - Models
             - No quantization
             - PTQ
             - QAT
+        - Dataset
     end note
     note right
         **Output:**
@@ -54,25 +62,26 @@ partition "FPGA Implementation" {
         end note
         note right
             **Output:**
-            - VHDL code
+            - Implementation Code
         end note
     fork again
-        :Implementation with Igo VHDL;
+        :Implementation with System Verilog;
         note right
             **Output:**
-            - VHDL code
+            - Implementation Code
         end note
     endfork
     :Compare FPGA models;
     note left
         **Input:**
-        - VHDL files
+        - Implementation files
     end note
     note right
         **Output:**
         - Latency
         - Resource usage
         - Power Consumption
+        - Performance metrics
     end note
 }
 
