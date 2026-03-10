@@ -32,11 +32,15 @@ def training(
         batch_size: int,
         optimizer: str = 'adam',
         metrics: list[str] = ['accuracy'],
-        callbacks: list[str] = [],
+        callbacks=None,
         patience: int = 25,
         detailed=False,
         dry_run: bool = False,
         **kw):
+
+    if callbacks is None:
+        callbacks = []
+
 
     output_dir = output_dir + \
         '/tuned.%s.sort_%d.init_%d.model' % (tag, sort, init)
