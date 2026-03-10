@@ -2,9 +2,10 @@ import logging
 from pathlib import Path
 from ringer_zero.models.vnoq0 import run_training
 
-def run_vnoq0_training(output_path: Path, 
-                        datapath: str, ref: str, 
-                        et: int, eta: int):
+
+def run_vnoq0_training(output_path: Path,
+                       datapath: str, ref: str,
+                       et: int, eta: int):
     output_dir = output_path / f'et{et}-eta{eta}'
     run_training(
         datapath=datapath,
@@ -12,7 +13,7 @@ def run_vnoq0_training(output_path: Path,
         eta=eta,
         ref=ref,
         output_dir=str(output_dir),
-        tag=f'vnoq0',
+        tag='vnoq0',
         batch_size=1024,
         sorts=10,
         inits=5,
@@ -30,4 +31,3 @@ if __name__ == '__main__':
         et=5,
         eta=0,
     )
-

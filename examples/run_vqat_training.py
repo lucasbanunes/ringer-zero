@@ -3,11 +3,11 @@ from pathlib import Path
 from ringer_zero.models.vqat import run_training
 
 
-def run_vqat_training(output_path: Path, 
-                        datapath: str, ref: str, 
-                        et: int, eta: int, 
-                        b0: int, i0: int, 
-                        iq_b0: int | None = None, iq_i0: int | None = None):
+def run_vqat_training(output_path: Path,
+                      datapath: str, ref: str,
+                      et: int, eta: int,
+                      b0: int, i0: int,
+                      iq_b0: int | None = None, iq_i0: int | None = None):
     output_dir = output_path / f'vqat-b{b0}-i{i0}_noluts/et{et}-eta{eta}'
     run_training(
         datapath=datapath,
@@ -41,4 +41,3 @@ if __name__ == '__main__':
         iq_b0=None,
         iq_i0=None
     )
-
