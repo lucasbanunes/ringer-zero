@@ -3,12 +3,26 @@ import os
 import json
 import pickle
 import numpy as np
-import tensorflow as tf
 from tensorflow import keras
 from sklearn.model_selection import StratifiedKFold
 from datetime import datetime
 from typing import Callable
 from keras import Model
+#
+# Set GPU memory control
+#
+try:
+    import tensorflow as tf
+    config = tf.compat.v1.ConfigProto()
+    config.gpu_options.allow_growth = True
+    session = tf.compat.v1.InteractiveSession(config=config)
+    tf.config.run_functions_eagerly(False)
+except Exception:
+    # traceback.print_exc()
+    import colorlog
+    logger = colorlog.getLogger()
+    logger.error("Not possible to set gpu allow growth")
+    raise
 
 from .callbacks import sp
 from .decorators import Summary, Reference
@@ -40,7 +54,6 @@ def training(
 
     if callbacks is None:
         callbacks = []
-
 
     output_dir = output_dir + \
         '/tuned.%s.sort_%d.init_%d.model' % (tag, sort, init)

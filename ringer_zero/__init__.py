@@ -10,26 +10,12 @@ from sklearn.utils.class_weight import compute_class_weight
 # Set logger
 #
 logger = colorlog.getLogger()
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 handler = colorlog.StreamHandler()
 handler.setFormatter(colorlog.ColoredFormatter())
 handler.setFormatter(colorlog.ColoredFormatter(
     '%(log_color)s [%(asctime)s] %(levelname)s %(message)s', datefmt='%a, %d %b %Y %H:%M:%S'))
 logger.addHandler(handler)
-
-#
-# Set GPU memory control
-#
-try:
-    import tensorflow as tf
-    config = tf.compat.v1.ConfigProto()
-    config.gpu_options.allow_growth = True
-    session = tf.compat.v1.InteractiveSession(config=config)
-    tf.config.run_functions_eagerly(False)
-except Exception:
-    # traceback.print_exc()
-    logger.error("Not possible to set gpu allow growth")
-    raise
 
 
 # bugfix: https://stackoverflow.com/questions/63158424/why-does-keras-model-fit-with-sample_weight-have-long-initialization-time
