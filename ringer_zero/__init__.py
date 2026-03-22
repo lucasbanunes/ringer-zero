@@ -36,3 +36,7 @@ def check_batch_size(target, batch_size):
     batch_size = (batch_size if np.min(n_evt_per_class) >
                   batch_size else np.min(n_evt_per_class))
     return batch_size
+
+
+def get_logger() -> logging.Logger:
+    return colorlog.getLogger()
