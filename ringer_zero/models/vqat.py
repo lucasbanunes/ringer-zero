@@ -151,10 +151,10 @@ class VQATTrainingJob(BaseModel):
             description='eta bin to select from the dataset. Should be in the format "eta_bin_left,eta_bin_right". Example: "0.0,0.8"'
         )]
     output_dir: Annotated[
-        Path,
+        Path | None,
         Field(
             description='Directory to save the training results'
-        )]
+        )] = None
     tag: Annotated[
         str,
         Field(
@@ -191,13 +191,20 @@ class VQATTrainingJob(BaseModel):
             self.et_bins = tuple(float(x) for x in self.et_bins.split(','))
         if isinstance(self.eta_bins, str):
             self.eta_bins = tuple(float(x) for x in self.eta_bins.split(','))
+
+        if self.output_dir is None:
+            self.output_dir = Path.cwd() / 'vqat_training_job'
+
+        self.output_dir.mkdir(parents=True, exist_ok=True)
         return super().model_post_init(context)
 
     @classmethod
-    def from_yaml(cls, yaml_file: Path) -> 'VQATTrainingJob':
+    def from_yaml(cls, yaml_file: Path, **kwargs) -> 'VQATTrainingJob':
         """Load VQATTrainingJob from a YAML file."""
         with open(yaml_file, 'r') as f:
             data = yaml.safe_load(f)
+        for key, value in kwargs.items():
+            data[key] = value
         return cls(**data)
 
     def load_data(self,
@@ -352,7 +359,8 @@ class VQATTrainingJob(BaseModel):
                 eta_bin_left=eta_bin_left,
                 eta_bin_right=eta_bin_right
             )
-            logger.info(f'Running training for et_bin ({et_bin_left}, {et_bin_right}) and eta_bin ({eta_bin_left}, {eta_bin_right})')
+            logger.info(
+                f'Running training for et_bin ({et_bin_left}, {et_bin_right}) and eta_bin ({eta_bin_left}, {eta_bin_right})')
             for fold, init in product(folds_range, inits_range):
                 X, X_val, y, y_val = self.load_data(
                     fold=fold,

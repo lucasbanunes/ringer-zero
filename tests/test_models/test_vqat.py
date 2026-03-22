@@ -46,3 +46,18 @@ def test_vqat_training_job(test_data_dir: Path):
         )
         job.run()
         logging.info(f'Output files: {list(output_dir.glob("*"))}')
+
+
+def test_vqat_training_job_from_yaml(test_data_dir: Path):
+    with TemporaryDirectory() as output_dir:
+        logging.info(f'Saving results to {output_dir}')
+        dataset_dir = test_data_dir / "test_dataset"
+        output_dir = Path(output_dir)
+
+        job = VQATTrainingJob.from_yaml(
+            test_data_dir / "vqat_training_job.yaml",
+            output_dir=output_dir,
+            dataset_dir=dataset_dir
+        )
+        job.run()
+        logging.info(f'Output files: {list(output_dir.glob("*"))}')
