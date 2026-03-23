@@ -17,6 +17,7 @@ import yaml
 from ringer_zero.tunning import training, RefType
 from ringer_zero import get_logger
 from ringer_zero.datasets import ParquetDataset
+from ..slurm import SlurmConfig
 
 
 def get_model(b0: int, i0: int) -> Sequential:
@@ -185,6 +186,11 @@ class VQATTrainingJob(BaseModel):
         Field(
             description='Perform a dry run without actually training'
         )] = False
+    slurm_config: Annotated[
+        SlurmConfig | None,
+        Field(
+            description='Slurm configuration for running the training job on a Slurm cluster'
+        )] = None
 
     def model_post_init(self, context):
         if isinstance(self.et_bins, str):
@@ -331,6 +337,54 @@ class VQATTrainingJob(BaseModel):
 
         return ref
 
+    def run_training(self,
+                     et_bin_left: float,
+                     et_bin_right: float,
+                     eta_bin_left: float,
+                     eta_bin_right: float,
+                     fold: int,
+                     init: int,):
+
+        logger = get_logger()
+        logger.info(
+            f'Loading data for et_bin ({et_bin_left}, {et_bin_right}), eta_bin ({eta_bin_left}, {eta_bin_right}), fold {fold} and init {init}')
+        ref = self.load_ref(
+            et_bin_left=et_bin_left,
+            et_bin_right=et_bin_right,
+            eta_bin_left=eta_bin_left,
+            eta_bin_right=eta_bin_right
+        )
+        X, X_val, y, y_val = self.load_data(
+            fold=fold,
+            et_bin_left=et_bin_left,
+            et_bin_right=et_bin_right,
+            eta_bin_left=eta_bin_left,
+            eta_bin_right=eta_bin_right
+        )
+        output_dir = self.output_dir / f'et_{et_bin_left}_{et_bin_right}' / \
+            f'eta_{eta_bin_left}_{eta_bin_right}' / f'fold_{fold}_init_{init}'
+        output_dir.mkdir(parents=True, exist_ok=True)
+        training(
+            X=X,
+            y=y,
+            X_val=X_val,
+            y_val=y_val,
+            sort=fold,
+            init=init,
+            tag=self.tag,
+            loss='binary_crossentropy',
+            verbose=True,
+            ref=ref,
+            model=get_model(self.b0, self.i0),
+            output_dir=str(output_dir),
+            batch_size=self.batch_size,
+            dry_run=self.dry_run,
+            et_bin=(et_bin_left, et_bin_right),
+            eta_bin=(eta_bin_left, eta_bin_right)
+        )
+        logger.info(
+            f'Training completed for et_bin ({et_bin_left}, {et_bin_right}), eta_bin ({eta_bin_left}, {eta_bin_right}), fold {fold} and init {init}')
+
     def run(self):
         logger = get_logger()
         dataset = ParquetDataset(dataset_dir=str(self.dataset_dir))
@@ -348,50 +402,35 @@ class VQATTrainingJob(BaseModel):
             self.eta_bins[:-1],
             self.eta_bins[1:],
         )
+        if self.slurm_config:
+            executor = self.slurm_config.get_executor()
         bins_iterator = product(et_bins_iterator, eta_bins_iterator)
         for i, ((et_bin_left, et_bin_right), (eta_bin_left, eta_bin_right)) in enumerate(bins_iterator):
             if i > 0 and self.dry_run:
                 logger.info('Dry run enabled, stopping after first bin.')
                 break
-            ref = self.load_ref(
-                et_bin_left=et_bin_left,
-                et_bin_right=et_bin_right,
-                eta_bin_left=eta_bin_left,
-                eta_bin_right=eta_bin_right
-            )
-            logger.info(
-                f'Running training for et_bin ({et_bin_left}, {et_bin_right}) and eta_bin ({eta_bin_left}, {eta_bin_right})')
             for fold, init in product(folds_range, inits_range):
-                X, X_val, y, y_val = self.load_data(
-                    fold=fold,
-                    et_bin_left=et_bin_left,
-                    et_bin_right=et_bin_right,
-                    eta_bin_left=eta_bin_left,
-                    eta_bin_right=eta_bin_right
-                )
-                logger.info(
-                    f'Running training for fold {fold} and init {init}'
-                )
-                current_output_dir = self.output_dir / \
-                    f'fold_{fold}_init_{init}'
-                training(
-                    X=X,
-                    y=y,
-                    X_val=X_val,
-                    y_val=y_val,
-                    sort=fold,
-                    init=init,
-                    tag=self.tag,
-                    loss='binary_crossentropy',
-                    verbose=True,
-                    ref=ref,
-                    model=get_model(self.b0, self.i0),
-                    output_dir=str(current_output_dir),
-                    batch_size=self.batch_size,
-                    dry_run=self.dry_run,
-                    et_bin=(et_bin_left, et_bin_right),
-                    eta_bin=(eta_bin_left, eta_bin_right)
-                )
+                if self.slurm_config is None:
+                    self.run_training(
+                        et_bin_left=et_bin_left,
+                        et_bin_right=et_bin_right,
+                        eta_bin_left=eta_bin_left,
+                        eta_bin_right=eta_bin_right,
+                        fold=fold,
+                        init=init
+                    )
+                else:
+                    logger.info('Submitting jobs to Slurm cluster...')
+                    executor.submit(
+                        self.run_training,
+                        et_bin_left,
+                        et_bin_right,
+                        eta_bin_left,
+                        eta_bin_right,
+                        fold,
+                        init
+                    )
+        logger.info('All training jobs submitted.')
 
 
 app = typer.Typer(
