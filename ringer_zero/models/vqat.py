@@ -17,7 +17,7 @@ import yaml
 from ringer_zero.tunning import training, RefType
 from ringer_zero import get_logger
 from ringer_zero.datasets import ParquetDataset
-from ..slurm import SlurmConfig
+from ..submitit import ExecutorConfig
 
 
 def get_model(b0: int, i0: int) -> Sequential:
@@ -186,11 +186,11 @@ class VQATTrainingJob(BaseModel):
         Field(
             description='Perform a dry run without actually training'
         )] = False
-    slurm_config: Annotated[
-        SlurmConfig | None,
+    executor_config: Annotated[
+        ExecutorConfig,
         Field(
             description='Slurm configuration for running the training job on a Slurm cluster'
-        )] = None
+        )]
 
     def model_post_init(self, context):
         if isinstance(self.et_bins, str):
@@ -402,25 +402,17 @@ class VQATTrainingJob(BaseModel):
             self.eta_bins[:-1],
             self.eta_bins[1:],
         )
-        if self.slurm_config:
-            executor = self.slurm_config.get_executor()
+        executor = self.executor_config.get_executor()
         bins_iterator = product(et_bins_iterator, eta_bins_iterator)
-        for i, ((et_bin_left, et_bin_right), (eta_bin_left, eta_bin_right)) in enumerate(bins_iterator):
-            if i > 0 and self.dry_run:
-                logger.info('Dry run enabled, stopping after first bin.')
-                break
-            for fold, init in product(folds_range, inits_range):
-                if self.slurm_config is None:
-                    self.run_training(
-                        et_bin_left=et_bin_left,
-                        et_bin_right=et_bin_right,
-                        eta_bin_left=eta_bin_left,
-                        eta_bin_right=eta_bin_right,
-                        fold=fold,
-                        init=init
-                    )
-                else:
-                    logger.info('Submitting jobs to Slurm cluster...')
+        i = 0
+        with executor.batch():
+            for (et_bin_left, et_bin_right), (eta_bin_left, eta_bin_right) in bins_iterator:
+                if i > 0 and self.dry_run:
+                    logger.info('Dry run enabled, stopping after first bin.')
+                    break
+                for fold, init in product(folds_range, inits_range):
+                    logger.info(
+                        f'{i} - Submitting training job for et_bin ({et_bin_left}, {et_bin_right}), eta_bin ({eta_bin_left}, {eta_bin_right}), fold {fold} and init {init}')
                     executor.submit(
                         self.run_training,
                         et_bin_left,
@@ -430,6 +422,8 @@ class VQATTrainingJob(BaseModel):
                         fold,
                         init
                     )
+                    i += 1
+
         logger.info('All training jobs submitted.')
 
 

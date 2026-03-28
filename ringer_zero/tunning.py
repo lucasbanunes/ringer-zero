@@ -1,4 +1,5 @@
 
+import gc
 import os
 import json
 import pickle
@@ -127,6 +128,10 @@ def training(
         filepath=output_dir + '/model.tf',
         format='tf_saved_model'
     )
+    keras.backend.clear_session()
+    del model
+    gc.collect()
+    return history
 
 
 def reprocessing(args, data_loader, detailed=False):
