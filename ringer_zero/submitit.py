@@ -30,6 +30,9 @@ class DebugExecutor:
 
 
 class ExecutorConfig(BaseModel):
+    """
+    Configuration for code executor. It provides a unified interface for different types of executors, such as Slurm, local parallel execution, and direct debug execution.
+    """
 
     cpus_per_task: Annotated[
         int,
@@ -40,7 +43,7 @@ class ExecutorConfig(BaseModel):
     executor_type: Annotated[
         Literal['slurm', 'debug', 'local'],
         Field(
-            description='Type of executor to use'
+            description='Type of executor to use. "slurm" submits the jobs to a slurm cluster, "debug" runs the jobs directly in the current process and "local" runs the jobs in parallel in the local machine using submitit LocalExecutor.'
         )
     ]
     logs_dir: Annotated[

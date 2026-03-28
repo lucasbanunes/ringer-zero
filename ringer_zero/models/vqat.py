@@ -18,6 +18,7 @@ from ringer_zero.tunning import training, RefType
 from ringer_zero import get_logger
 from ringer_zero.datasets import ParquetDataset
 from ..submitit import ExecutorConfig
+from ..utils import pydantic_to_markdown_schema
 
 
 def get_model(b0: int, i0: int) -> Sequential:
@@ -101,6 +102,9 @@ def norm1(data):
 
 
 class VQATTrainingJob(BaseModel):
+    """
+    Job for training a VQAT model on a given dataset, with a given configuration.
+    """
     dataset_dir: Annotated[
         Path,
         Field(
@@ -428,11 +432,18 @@ class VQATTrainingJob(BaseModel):
 
 
 app = typer.Typer(
-    help='Ringer Zero VQAT commands'
+    help='Ringer Zero VQAT commands',
+    rich_markup_mode="markdown"
 )
 
 
-@app.command()
+RUN_TRAINING_HELP = 'Run VQAT training jobs'
+
+
+@app.command(
+    short_help=RUN_TRAINING_HELP,
+    help=f'**{RUN_TRAINING_HELP}**\n\n{pydantic_to_markdown_schema(VQATTrainingJob)}'
+)
 def run_training(
     config: Annotated[
         Path,
