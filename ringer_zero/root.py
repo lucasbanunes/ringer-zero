@@ -43,8 +43,10 @@ ROOT_TO_ARROW_SCALARS = {
 }
 
 
-def read_ttree_as_ak(input_file: str | Path | Iterable[Path] | Iterable[str],
-                     ttree_name: str = 'CollectionTree') -> ak.Array:
+def read_ttree_as_ak(
+    input_file: str | Path | Iterable[Path] | Iterable[str],
+    ttree_name: str = "CollectionTree",
+) -> ak.Array:
     """
     Reads a single ttree as an awkward array.
 
@@ -60,15 +62,15 @@ def read_ttree_as_ak(input_file: str | Path | Iterable[Path] | Iterable[str],
     ak.Array
         An awkward array containing the data.
     """
-    uproot_path = f'{str(input_file)}:{ttree_name}'
+    uproot_path = f"{str(input_file)}:{ttree_name}"
     with uproot.open(uproot_path) as ttree:
-        ak_array = ttree.arrays(library='ak')
+        ak_array = ttree.arrays(library="ak")
     return ak_array
 
 
 def read_ttree_as_pdf(
     input_file: str | Path | Iterable[Path] | Iterable[str],
-    ttree_name: str = 'CollectionTree'
+    ttree_name: str = "CollectionTree",
 ) -> pd.DataFrame:
     """
     Reads a single ttree as a pandas DataFrame.
@@ -88,16 +90,15 @@ def read_ttree_as_pdf(
     ak_array = read_ttree_as_ak(input_file, ttree_name)
     # It is easier and more consistent to do this than to use ak.to_dataframe
     with TemporaryDirectory() as tmp_dir:
-        parquet_path = f'{tmp_dir}/temp.parquet'
+        parquet_path = f"{tmp_dir}/temp.parquet"
         ak.to_parquet(ak_array, parquet_path, list_to32=True)
-        df = pd.read_parquet(
-            parquet_path, dtype_backend='pyarrow', engine='pyarrow')
+        df = pd.read_parquet(parquet_path, dtype_backend="pyarrow", engine="pyarrow")
     return df
 
 
 def read_ttree_as_arrow(
     input_file: str | Path | Iterable[Path] | Iterable[str],
-    ttree_name: str = 'CollectionTree'
+    ttree_name: str = "CollectionTree",
 ) -> pa.Table:
     """
     Reads a single ttree as a pandas DataFrame.
@@ -117,7 +118,7 @@ def read_ttree_as_arrow(
     ak_array = read_ttree_as_ak(input_file, ttree_name)
     # It is easier and more consistent to write parquet and read with pyarrow than to use ak.to_arrow_table directly
     with TemporaryDirectory() as tmp_dir:
-        parquet_path = f'{tmp_dir}/temp.parquet'
+        parquet_path = f"{tmp_dir}/temp.parquet"
         ak.to_parquet(ak_array, parquet_path, list_to32=True)
         arrow_table = pa.parquet.read_table(parquet_path)
     return arrow_table
@@ -175,14 +176,14 @@ def extract_angle_brackets_content(text: str) -> str | None:
         elif ch == ">":
             depth -= 1
             if depth == 0:
-                return text[start + 1:i]
+                return text[start + 1 : i]
             if depth < 0:
                 return None  # malformed (more '>' than '<')
 
     return None  # malformed (unclosed '<')
 
 
-VECTOR_PREFIXES = ('std::vector<', 'vector<', 'ROOT::VecOps::RVec<')
+VECTOR_PREFIXES = ("std::vector<", "vector<", "ROOT::VecOps::RVec<")
 
 
 ROOT_TO_PYTHON_SCALARS = {
@@ -236,12 +237,12 @@ def root_type_to_pyarrow_type(type_name: str, strict: bool = True) -> pa.DataTyp
         The mapped PyArrow data type.
     """
     normalized = type_name.strip()
-    normalized = normalized.replace('const ', '').replace('&', '').strip()
+    normalized = normalized.replace("const ", "").replace("&", "").strip()
     if normalized.startswith(VECTOR_PREFIXES):
         inner = extract_angle_brackets_content(normalized)
         return pa.list_(root_type_to_pyarrow_type(inner, strict=strict))
 
-    fixed_array_match = re.match(r'^(.+)\[(\d+)\]$', normalized)
+    fixed_array_match = re.match(r"^(.+)\[(\d+)\]$", normalized)
     if fixed_array_match:
         inner_name = fixed_array_match.group(1).strip()
         array_size = int(fixed_array_match.group(2))
@@ -254,9 +255,7 @@ def root_type_to_pyarrow_type(type_name: str, strict: bool = True) -> pa.DataTyp
         return ROOT_TO_ARROW_SCALARS[normalized]()
 
     if strict:
-        raise ValueError(
-            f'Unsupported ROOT type for PyArrow conversion: {type_name}'
-        )
+        raise ValueError(f"Unsupported ROOT type for PyArrow conversion: {type_name}")
     return pa.string()
 
 
@@ -266,7 +265,7 @@ def rdf_schema_to_pyarrow_schema(
     strict: bool = True,
     nullable: bool = True,
     preserve_root_type_metadata: bool = True,
-    metadata_encoding: str = 'utf-8',
+    metadata_encoding: str = "utf-8",
 ) -> pa.Schema:
     """
     Convert a ROOT RDataFrame schema dictionary into a PyArrow schema.
@@ -296,7 +295,7 @@ def rdf_schema_to_pyarrow_schema(
         arrow_type = root_type_to_pyarrow_type(root_type, strict=strict)
         metadata = None
         if preserve_root_type_metadata:
-            metadata = {'root_type': root_type.encode(metadata_encoding)}
+            metadata = {"root_type": root_type.encode(metadata_encoding)}
 
         fields.append(
             pa.field(
@@ -311,12 +310,12 @@ def rdf_schema_to_pyarrow_schema(
 
 
 NOCAST_ROOT_TYPES = [
-    'Float_t',
-    'Double_t',
-    'Int_t',
-    'int',
-    'float',
-    'double',
+    "Float_t",
+    "Double_t",
+    "Int_t",
+    "int",
+    "float",
+    "double",
 ]
 
 
@@ -326,21 +325,19 @@ def get_root_to_python_caster(root_type: str) -> Callable[[Any], Any]:
     elif root_type.startswith(VECTOR_PREFIXES):
         inner_root_type = extract_angle_brackets_content(root_type)
         if inner_root_type is None:
-            raise ValueError(f'Malformed vector type: {root_type}')
+            raise ValueError(f"Malformed vector type: {root_type}")
         inner_caster = get_root_to_python_caster(inner_root_type)
         # Recursively cast elements in the vector
         return lambda x: [inner_caster(elem) for elem in x]
     else:
-        raise ValueError(
-            f'Unsupported ROOT type for Python conversion: {root_type}'
-        )
+        raise ValueError(f"Unsupported ROOT type for Python conversion: {root_type}")
 
 
 def ttree_python_sample_generator(
     input_file: str | Path | Iterable[Path] | Iterable[str],
-    ttree_name: str = 'CollectionTree'
+    ttree_name: str = "CollectionTree",
 ) -> Generator[dict[str, Any], None, None]:
-    for filepath in walk_paths(input_file, file_ext='root'):
+    for filepath in walk_paths(input_file, file_ext="root"):
         rdf = ROOT.RDataFrame(ttree_name, str(filepath))
         rdf_schema = get_rdf_schema(rdf)
         tree_caster = {
@@ -359,7 +356,7 @@ def ttree_python_sample_generator(
 
 def read_ttree_as_dict(
     input_file: str | Path | Iterable[Path] | Iterable[str],
-    ttree_name: str = 'CollectionTree'
+    ttree_name: str = "CollectionTree",
 ) -> pd.DataFrame:
     """
     Reads a single ttree as a pandas DataFrame.
@@ -376,8 +373,8 @@ def read_ttree_as_dict(
     pd.DataFrame
         A pandas DataFrame containing the data with proper PyArrow dtypes.
     """
-    uproot_path = f'{str(input_file)}:{ttree_name}'
+    uproot_path = f"{str(input_file)}:{ttree_name}"
     with uproot.open(uproot_path) as ttree:
-        arrow_table = ak.to_arrow_table(ttree.arrays(library='ak'))
+        arrow_table = ak.to_arrow_table(ttree.arrays(library="ak"))
         pdf = arrow_table.to_pandas()
     return pdf
