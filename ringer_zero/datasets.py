@@ -6,6 +6,8 @@ from pydantic import BaseModel, Field
 import typer
 
 
+type RefType = dict[str, dict[str, dict[str, float]]]
+
 type DirectoryType = Annotated[
     Path, Field(description="Path to the directory containing the dataset files.")
 ]

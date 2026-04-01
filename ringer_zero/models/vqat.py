@@ -5,23 +5,24 @@ from pathlib import Path
 from typing import Annotated
 import pandas as pd
 import numpy as np
-from keras import Sequential
-import hgq.layers as qlayers
-from hgq.config import QuantizerConfigScope
-from hgq.constraints import Constant
 from pydantic import BaseModel, Field
 import typer
 import duckdb
 import yaml
 
-from ringer_zero.tensorflow.tunning import training, RefType
 from ringer_zero import get_logger
 from ringer_zero.datasets import ParquetDataset
 from ..submitit import ExecutorConfig
 from ..utils import pydantic_to_markdown_schema
+from ..datasets import RefType
 
 
-def get_model(b0: int, i0: int) -> Sequential:
+def get_model(b0: int, i0: int):
+    from keras import Sequential
+    import hgq.layers as qlayers
+    from hgq.config import QuantizerConfigScope
+    from hgq.constraints import Constant
+
     with (
         QuantizerConfigScope(
             place={'weight', 'bias'},
@@ -368,6 +369,9 @@ class VQATTrainingJob(BaseModel):
         output_dir = self.output_dir / f'et_{et_bin_left}_{et_bin_right}' / \
             f'eta_{eta_bin_left}_{eta_bin_right}' / f'fold_{fold}_init_{init}'
         output_dir.mkdir(parents=True, exist_ok=True)
+
+        from ringer_zero.tensorflow.tunning import training
+
         training(
             X=X,
             y=y,
