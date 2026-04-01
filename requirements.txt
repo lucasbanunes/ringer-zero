@@ -1,3 +1,4 @@
+awkward==2.9.0
 colorlog==6.10.1
 duckdb==1.4.4
 HGQ2==0.1.6
@@ -13,4 +14,5 @@ submitit==1.5.4
 tables==3.10.2
 tensorflow==2.20.0
 typer==0.23.1
-# tf2onnx==1.16.1 Installing tfwonnx gives cannot import name 'runtime_version' from 'google.protobuf'
+# tf2onnx==1.16.1 Installing tf2onnx raises cannot import name 'runtime_version' from 'google.protobuf'
+uproot==5.7.2
