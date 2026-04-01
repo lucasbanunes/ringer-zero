@@ -1,5 +1,7 @@
 # Training results folder
 /results
+/configs
+/logs
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
