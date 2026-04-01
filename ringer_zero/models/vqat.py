@@ -14,7 +14,7 @@ import typer
 import duckdb
 import yaml
 
-from ringer_zero.tunning import training, RefType
+from ringer_zero.tensorflow.tunning import training, RefType
 from ringer_zero import get_logger
 from ringer_zero.datasets import ParquetDataset
 from ..submitit import ExecutorConfig

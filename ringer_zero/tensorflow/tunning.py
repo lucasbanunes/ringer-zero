@@ -26,9 +26,9 @@ except Exception:
     logger.error("Not possible to set gpu allow growth")
     raise
 
-from .tensorflow.callbacks import SP
-from .decorators import Summary, Reference
-from . import check_batch_size, class_weight, logger
+from .callbacks import SP
+from ..decorators import Summary, Reference
+from .. import check_batch_size, class_weight, logger
 
 
 type RefType = dict[str, dict[str, dict[str, float]]]
