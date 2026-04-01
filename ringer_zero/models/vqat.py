@@ -51,6 +51,7 @@ def quantizer(rings):
     return rings_q15
 
 
+
 def get_data_query(
         rings_col: str,
         rings_indexes: list[int],
@@ -66,8 +67,12 @@ def get_data_query(
         eta_bin_right: float,
         data_table_glob: str,
         kfold_table_glob: str) -> str:
-    scalar_rings_indexes = ',\n    '.join(
-        [f"data.{rings_col}[{i+1}] as rings_{i}" for i in rings_indexes])
+    scalar_rings_indexes = ",\n    ".join(
+        [f"data.{rings_col}[{i + 1}] as rings_{i}" for i in rings_indexes]
+    )
+    et_upper_condition = (
+        "TRUE" if math.isinf(et_bin_right) else f"data.{et_col} < {et_bin_right}"
+    )
     return f"""
 SELECT
     {scalar_rings_indexes},
@@ -76,7 +81,7 @@ FROM read_parquet('{data_table_glob}') as data
 LEFT JOIN read_parquet('{kfold_table_glob}') as kfold
 ON data.id = kfold.id
 WHERE data.{et_col} >= {et_bin_left} AND
-      data.{et_col} < {et_bin_right} AND
+    {et_upper_condition} AND
       abs(data.{eta_col}) >= {eta_bin_left} AND
       abs(data.{eta_col}) < {eta_bin_right} AND
       kfold.{fold_col} {fold_signal} {fold} AND
