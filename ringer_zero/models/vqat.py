@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 import typer
 import duckdb
 import yaml
+import math
 
 from ringer_zero.tunning import training, RefType
 from ringer_zero import get_logger
