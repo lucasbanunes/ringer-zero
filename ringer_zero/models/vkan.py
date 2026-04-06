@@ -1,11 +1,9 @@
 #!/usr/bin/env python
-import math
 from itertools import product
 from pathlib import Path
 from typing import Annotated
-import duckdb
 import numpy as np
-import pandas as pd
+import polars as pl
 from pydantic import BaseModel, Field
 import typer
 import yaml
@@ -23,53 +21,15 @@ def get_model(input_dim: int, grid_size: int, spline_order: int):
     return KAN([input_dim, 5, 1], grid_size=grid_size, spline_order=spline_order)
 
 
-def get_data_query(
-    rings_col: str,
-    rings_indexes: list[int],
-    label_col: str,
-    fold_col: str,
-    fold: int,
-    fold_signal: str,
-    et_col: str,
-    et_bin_left: float,
-    et_bin_right: float,
-    eta_col: str,
-    eta_bin_left: float,
-    eta_bin_right: float,
-    data_table_glob: str,
-    kfold_table_glob: str,
-) -> str:
-    scalar_rings_indexes = ",\n    ".join(
-        [f"data.{rings_col}[{i + 1}] as rings_{i}" for i in rings_indexes]
-    )
-    et_upper_condition = (
-        "TRUE" if math.isinf(et_bin_right) else f"data.{et_col} < {et_bin_right}"
-    )
-    return f"""
-SELECT
-    {scalar_rings_indexes},
-    CAST(kfold.{label_col} AS UTINYINT) as label
-FROM read_parquet('{data_table_glob}') as data
-LEFT JOIN read_parquet('{kfold_table_glob}') as kfold
-ON data.id = kfold.id
-WHERE data.{et_col} >= {et_bin_left} AND
-    {et_upper_condition} AND
-      abs(data.{eta_col}) >= {eta_bin_left} AND
-      abs(data.{eta_col}) < {eta_bin_right} AND
-      kfold.{fold_col} {fold_signal} {fold} AND
-      kfold.{label_col} IS NOT NULL AND
-      kfold.{fold_col} IS NOT NULL;
-"""
-
-
 def get_n_folds(kfold_table_glob: str, fold_col: str) -> int:
-    with duckdb.connect(":memory:") as conn:
-        query = f"""
-        SELECT MAX({fold_col}) + 1 as n_folds
-        FROM read_parquet('{kfold_table_glob}')
-        WHERE {fold_col} IS NOT NULL;
-        """
-        return conn.execute(query).fetchone()[0]
+    max_fold = (
+        pl.scan_parquet(kfold_table_glob)
+        .filter(pl.col(fold_col).is_not_null())
+        .select(pl.col(fold_col).max().alias("max_fold"))
+        .collect()
+        .item()
+    )
+    return int(max_fold) + 1
 
 
 def norm1(data):
@@ -154,6 +114,58 @@ class VKANTrainingJob(BaseModel):
             data[key] = value
         return cls(**data)
 
+    def get_data(
+        self,
+        ring_indexes: list[int],
+        data_table_glob: Path,
+        kfold_table_glob: Path,
+        fold: int,
+        et_bin_left: float,
+        et_bin_right: float,
+        eta_bin_left: float,
+        eta_bin_right: float,
+    ) -> tuple[pl.LazyFrame, pl.LazyFrame]:
+        et = pl.col(self.et_col)
+        et_bin_left_lit = pl.lit(et_bin_left, dtype=pl.dtype_of(et))
+        et_bin_right_lit = pl.lit(et_bin_right, dtype=pl.dtype_of(et))
+
+        eta = pl.col(self.eta_col).abs()
+        eta_bin_left_lit = pl.lit(eta_bin_left, dtype=pl.dtype_of(eta))
+        eta_bin_right_lit = pl.lit(eta_bin_right, dtype=pl.dtype_of(eta))
+
+        rings = [
+            pl.col(self.rings_col).list.get(i).alias(f"rings_{i}") for i in ring_indexes
+        ]
+
+        data_df = (
+            pl.scan_parquet(data_table_glob)
+            .filter(
+                et.is_between(et_bin_left_lit, et_bin_right_lit, closed="left")
+                & eta.is_between(eta_bin_left_lit, eta_bin_right_lit, closed="left")
+            )
+            .select("id", *rings)
+        )
+
+        label = pl.col(self.label_col)
+        fold_col = pl.col(self.fold_col)
+        fold_lit = pl.lit(fold, dtype=pl.dtype_of(fold_col))
+
+        val_fold_df = (
+            pl.scan_parquet(kfold_table_glob)
+            .filter((fold_col == fold_lit) & label.is_not_null())
+            .select("id", label.cast(pl.Int32))
+        )
+
+        train_fold_df = (
+            pl.scan_parquet(kfold_table_glob)
+            .filter((fold_col != fold_lit) & label.is_not_null())
+            .select("id", label.cast(pl.Int32))
+        )
+
+        train_df = data_df.join(train_fold_df, on="id", how="inner").drop("id")
+        val_df = data_df.join(val_fold_df, on="id", how="inner").drop("id")
+        return train_df, val_df
+
     def load_data(
         self,
         fold: int,
@@ -179,57 +191,24 @@ class VKANTrainingJob(BaseModel):
 
         dataset = ParquetDataset(dataset_dir=self.dataset_dir)
 
-        train_query = get_data_query(
-            rings_col=self.rings_col,
-            rings_indexes=rings_indexes,
-            label_col=self.label_col,
-            fold_col=self.fold_col,
-            fold=fold,
-            fold_signal="!=",
-            et_col=self.et_col,
-            et_bin_left=et_bin_left,
-            et_bin_right=et_bin_right,
-            eta_col=self.eta_col,
-            eta_bin_left=eta_bin_left,
-            eta_bin_right=eta_bin_right,
+        train_df, val_df = self.get_data(
+            ring_indexes=rings_indexes,
             data_table_glob=dataset.get_table_glob(self.data_table),
             kfold_table_glob=dataset.get_table_glob(self.kfold_table),
-        )
-
-        val_query = get_data_query(
-            rings_col=self.rings_col,
-            rings_indexes=rings_indexes,
-            label_col=self.label_col,
-            fold_col=self.fold_col,
             fold=fold,
-            fold_signal="=",
-            et_col=self.et_col,
             et_bin_left=et_bin_left,
             et_bin_right=et_bin_right,
-            eta_col=self.eta_col,
             eta_bin_left=eta_bin_left,
             eta_bin_right=eta_bin_right,
-            data_table_glob=dataset.get_table_glob(self.data_table),
-            kfold_table_glob=dataset.get_table_glob(self.kfold_table),
         )
+        train_df, val_df = pl.collect_all([train_df, val_df])
 
-        with duckdb.connect(":memory:") as conn:
-            train_df = (
-                conn.execute(train_query)
-                .fetch_arrow_table()
-                .to_pandas(types_mapper=pd.ArrowDtype)
-            )
-            val_df = (
-                conn.execute(val_query)
-                .fetch_arrow_table()
-                .to_pandas(types_mapper=pd.ArrowDtype)
-            )
-
-        val_label = val_df.pop("label").values
-        val_rings = norm1(val_df.values.astype(np.float32))
+        val_label = val_df.drop_in_place(self.label_col).to_numpy().flatten()
+        val_rings = norm1(val_df.to_numpy().astype(np.float32))
         del val_df
-        train_label = train_df.pop("label").values
-        train_rings = norm1(train_df.values.astype(np.float32))
+
+        train_label = train_df.drop_in_place(self.label_col).to_numpy().flatten()
+        train_rings = norm1(train_df.to_numpy().astype(np.float32))
         del train_df
 
         return (
