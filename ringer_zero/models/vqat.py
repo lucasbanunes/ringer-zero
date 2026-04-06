@@ -3,7 +3,6 @@ from collections import defaultdict
 from itertools import product
 from pathlib import Path
 from typing import Annotated
-import pandas as pd
 import numpy as np
 from keras import Sequential
 import hgq.layers as qlayers
@@ -14,6 +13,7 @@ import typer
 import duckdb
 import yaml
 import math
+import polars as pl
 
 from ringer_zero.tunning import training, RefType
 from ringer_zero import get_logger
@@ -52,7 +52,6 @@ def quantizer(rings):
     return rings_q15
 
 
-
 def get_data_query(
         rings_col: str,
         rings_indexes: list[int],
@@ -72,7 +71,8 @@ def get_data_query(
         [f"data.{rings_col}[{i + 1}] as rings_{i}" for i in rings_indexes]
     )
     et_upper_condition = (
-        "TRUE" if math.isinf(et_bin_right) else f"data.{et_col} < {et_bin_right}"
+        "TRUE" if math.isinf(
+            et_bin_right) else f"data.{et_col} < {et_bin_right}"
     )
     return f"""
 SELECT
@@ -92,13 +92,14 @@ WHERE data.{et_col} >= {et_bin_left} AND
 
 
 def get_n_folds(kfold_table_glob: str, fold_col: str) -> int:
-    with duckdb.connect(':memory:') as conn:
-        query = f"""
-        SELECT MAX({fold_col}) + 1 as n_folds
-        FROM read_parquet('{kfold_table_glob}')
-        WHERE {fold_col} IS NOT NULL;
-        """
-        return conn.execute(query).fetchone()[0]
+    n_folds = pl.scan_parquet(
+        kfold_table_glob
+    ).filter(
+        pl.col(fold_col).is_not_null()
+    ).select(
+        pl.col(fold_col).max().alias('max_fold')
+    ).collect().item()
+    return n_folds
 
 
 def norm1(data):
@@ -223,6 +224,58 @@ class VQATTrainingJob(BaseModel):
             data[key] = value
         return cls(**data)
 
+    def get_data(
+        self,
+        ring_indexes: list[int],
+        data_table_glob: Path,
+        kfold_table_glob: Path,
+        fold: int,
+        et_bin_left: float,
+        et_bin_right: float,
+        eta_bin_left: float,
+        eta_bin_right: float
+    ) -> tuple[pl.LazyFrame, pl.LazyFrame]:
+
+        et = pl.col(self.et_col)
+        et_bin_left = pl.lit(et_bin_left, dtype=pl.dtype_of(et))
+        et_bin_right = pl.lit(et_bin_right, dtype=pl.dtype_of(et))
+
+        eta = pl.col(self.eta_col).abs()
+        eta_bin_left = pl.lit(eta_bin_left, dtype=pl.dtype_of(eta))
+        eta_bin_right = pl.lit(eta_bin_right, dtype=pl.dtype_of(eta))
+
+        # rings_norm = pl.col(self.rings_col).list.gather(
+        #     ring_indexes).list.sum().abs()
+        # rings_norm = pl.when(rings_norm == 0).then(1).otherwise(rings_norm)
+        rings = [
+            pl.col(self.rings_col).list.get(i).alias(f'rings_{i}')
+            for i in ring_indexes
+        ]
+
+        data_df = pl.scan_parquet(data_table_glob).filter(
+            et.is_between(et_bin_left, et_bin_right, closed='left') &
+            eta.is_between(eta_bin_left, eta_bin_right, closed='left')
+        ).select(
+            'id', *rings
+        )
+
+        label = pl.col(self.label_col)
+
+        fold_col = pl.col(self.fold_col)
+        fold = pl.lit(fold, dtype=pl.dtype_of(fold_col))
+        val_fold_df = pl.scan_parquet(kfold_table_glob) \
+            .filter((fold_col == fold) & label.is_not_null()) \
+            .select('id', label.cast(pl.Int32))
+
+        train_fold_df = pl.scan_parquet(kfold_table_glob) \
+            .filter((fold_col != fold) & label.is_not_null()) \
+            .select('id', label.cast(pl.Int32))
+
+        train_df = data_df.join(train_fold_df, on='id', how='inner').drop('id')
+        val_df = data_df.join(val_fold_df, on='id', how='inner').drop('id')
+
+        return train_df, val_df
+
     def load_data(self,
                   fold: int,
                   et_bin_left: float,
@@ -268,56 +321,32 @@ class VQATTrainingJob(BaseModel):
 
         dataset = ParquetDataset(dataset_dir=self.dataset_dir)
 
-        train_query = get_data_query(
-            rings_col=self.rings_col,
-            rings_indexes=rings_indexes,
-            label_col=self.label_col,
-            fold_col=self.fold_col,
+        train_df, val_df = self.get_data(
+            ring_indexes=rings_indexes,
+            data_table_glob=dataset.get_table_glob(self.data_table),
+            kfold_table_glob=dataset.get_table_glob(self.kfold_table),
             fold=fold,
-            fold_signal='!=',
-            et_col=self.et_col,
             et_bin_left=et_bin_left,
             et_bin_right=et_bin_right,
-            eta_col=self.eta_col,
             eta_bin_left=eta_bin_left,
-            eta_bin_right=eta_bin_right,
-            data_table_glob=dataset.get_table_glob(self.data_table),
-            kfold_table_glob=dataset.get_table_glob(self.kfold_table)
+            eta_bin_right=eta_bin_right
         )
-
-        val_query = get_data_query(
-            rings_col=self.rings_col,
-            rings_indexes=rings_indexes,
-            label_col=self.label_col,
-            fold_col=self.fold_col,
-            fold=fold,
-            fold_signal='=',
-            et_col=self.et_col,
-            et_bin_left=et_bin_left,
-            et_bin_right=et_bin_right,
-            eta_col=self.eta_col,
-            eta_bin_left=eta_bin_left,
-            eta_bin_right=eta_bin_right,
-            data_table_glob=dataset.get_table_glob(self.data_table),
-            kfold_table_glob=dataset.get_table_glob(self.kfold_table)
-        )
-
-        with duckdb.connect(':memory:') as conn:
-            train_df = conn.execute(train_query) \
-                .fetch_arrow_table().to_pandas(types_mapper=pd.ArrowDtype)
-            val_df = conn.execute(val_query) \
-                .fetch_arrow_table().to_pandas(types_mapper=pd.ArrowDtype)
+        train_df, val_df = pl.collect_all([train_df, val_df])
 
         # The dataframes only have rings and the label,
         # we need to separate them and convert the rings to normalized and quantized numpy arrays
-        val_label = val_df.pop('label').values
-        val_rings = norm1(quantizer(val_df.values.astype(np.float32)))
+        val_label = val_df.drop_in_place(
+            self.label_col).to_numpy().flatten()
+        val_rings = val_df.to_numpy()
         del val_df  # Frees memory premptively
-        train_label = train_df.pop('label').values
-        train_rings = norm1(quantizer(train_df.values.astype(np.float32)))
-        del train_df
+        val_rings = quantizer(norm1(val_rings))
+        train_label = train_df.drop_in_place(
+            self.label_col).to_numpy().flatten()
+        train_rings = train_df.to_numpy()
+        del train_df  # Frees memory premptively
+        train_rings = quantizer(norm1(train_rings))
 
-        return train_rings, val_rings, train_label.astype(np.int32), val_label.astype(np.int32)
+        return train_rings, val_rings, train_label, val_label
 
     def load_ref(self,
                  et_bin_left: float,
