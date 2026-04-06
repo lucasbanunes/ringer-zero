@@ -3,6 +3,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from ringer_zero.models.vqat import VQATTrainingJob
+from ringer_zero.submitit import ExecutorConfig
 
 
 def test_vqat_training_job(test_data_dir: Path):
@@ -42,7 +43,17 @@ def test_vqat_training_job(test_data_dir: Path):
             i0=7,
             batch_size=32,
             inits=5,
-            dry_run=True
+            dry_run=True,
+            executor_config=ExecutorConfig(
+                cpus_per_task=1,
+                executor_type='debug',
+                logs_dir='./logs',
+                name='test_vqat_training_job',
+                slurm_array_parallelism=1,
+                slurm_partition=None,
+                stderr_to_stdout=True,
+                timeout_min=5
+            )
         )
         job.run()
         logging.info(f'Output files: {list(output_dir.glob("*"))}')

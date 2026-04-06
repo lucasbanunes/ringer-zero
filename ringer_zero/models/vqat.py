@@ -3,7 +3,6 @@ from collections import defaultdict
 from itertools import product
 from pathlib import Path
 from typing import Annotated
-import pandas as pd
 import numpy as np
 from keras import Sequential
 import hgq.layers as qlayers
@@ -13,10 +12,14 @@ from pydantic import BaseModel, Field
 import typer
 import duckdb
 import yaml
+import math
+import polars as pl
 
 from ringer_zero.tunning import training, RefType
 from ringer_zero import get_logger
 from ringer_zero.datasets import ParquetDataset
+from ..submitit import ExecutorConfig
+from ..utils import pydantic_to_markdown_schema
 
 
 def get_model(b0: int, i0: int) -> Sequential:
@@ -64,8 +67,13 @@ def get_data_query(
         eta_bin_right: float,
         data_table_glob: str,
         kfold_table_glob: str) -> str:
-    scalar_rings_indexes = ',\n    '.join(
-        [f"data.{rings_col}[{i+1}] as rings_{i}" for i in rings_indexes])
+    scalar_rings_indexes = ",\n    ".join(
+        [f"data.{rings_col}[{i + 1}] as rings_{i}" for i in rings_indexes]
+    )
+    et_upper_condition = (
+        "TRUE" if math.isinf(
+            et_bin_right) else f"data.{et_col} < {et_bin_right}"
+    )
     return f"""
 SELECT
     {scalar_rings_indexes},
@@ -74,7 +82,7 @@ FROM read_parquet('{data_table_glob}') as data
 LEFT JOIN read_parquet('{kfold_table_glob}') as kfold
 ON data.id = kfold.id
 WHERE data.{et_col} >= {et_bin_left} AND
-      data.{et_col} < {et_bin_right} AND
+    {et_upper_condition} AND
       abs(data.{eta_col}) >= {eta_bin_left} AND
       abs(data.{eta_col}) < {eta_bin_right} AND
       kfold.{fold_col} {fold_signal} {fold} AND
@@ -84,13 +92,14 @@ WHERE data.{et_col} >= {et_bin_left} AND
 
 
 def get_n_folds(kfold_table_glob: str, fold_col: str) -> int:
-    with duckdb.connect(':memory:') as conn:
-        query = f"""
-        SELECT MAX({fold_col}) + 1 as n_folds
-        FROM read_parquet('{kfold_table_glob}')
-        WHERE {fold_col} IS NOT NULL;
-        """
-        return conn.execute(query).fetchone()[0]
+    n_folds = pl.scan_parquet(
+        kfold_table_glob
+    ).filter(
+        pl.col(fold_col).is_not_null()
+    ).select(
+        pl.col(fold_col).max().alias('max_fold')
+    ).collect().item()
+    return n_folds
 
 
 def norm1(data):
@@ -100,6 +109,9 @@ def norm1(data):
 
 
 class VQATTrainingJob(BaseModel):
+    """
+    Job for training a VQAT model on a given dataset, with a given configuration.
+    """
     dataset_dir: Annotated[
         Path,
         Field(
@@ -185,6 +197,11 @@ class VQATTrainingJob(BaseModel):
         Field(
             description='Perform a dry run without actually training'
         )] = False
+    executor_config: Annotated[
+        ExecutorConfig,
+        Field(
+            description='Slurm configuration for running the training job on a Slurm cluster'
+        )]
 
     def model_post_init(self, context):
         if isinstance(self.et_bins, str):
@@ -206,6 +223,58 @@ class VQATTrainingJob(BaseModel):
         for key, value in kwargs.items():
             data[key] = value
         return cls(**data)
+
+    def get_data(
+        self,
+        ring_indexes: list[int],
+        data_table_glob: Path,
+        kfold_table_glob: Path,
+        fold: int,
+        et_bin_left: float,
+        et_bin_right: float,
+        eta_bin_left: float,
+        eta_bin_right: float
+    ) -> tuple[pl.LazyFrame, pl.LazyFrame]:
+
+        et = pl.col(self.et_col)
+        et_bin_left = pl.lit(et_bin_left, dtype=pl.dtype_of(et))
+        et_bin_right = pl.lit(et_bin_right, dtype=pl.dtype_of(et))
+
+        eta = pl.col(self.eta_col).abs()
+        eta_bin_left = pl.lit(eta_bin_left, dtype=pl.dtype_of(eta))
+        eta_bin_right = pl.lit(eta_bin_right, dtype=pl.dtype_of(eta))
+
+        # rings_norm = pl.col(self.rings_col).list.gather(
+        #     ring_indexes).list.sum().abs()
+        # rings_norm = pl.when(rings_norm == 0).then(1).otherwise(rings_norm)
+        rings = [
+            pl.col(self.rings_col).list.get(i).alias(f'rings_{i}')
+            for i in ring_indexes
+        ]
+
+        data_df = pl.scan_parquet(data_table_glob).filter(
+            et.is_between(et_bin_left, et_bin_right, closed='left') &
+            eta.is_between(eta_bin_left, eta_bin_right, closed='left')
+        ).select(
+            'id', *rings
+        )
+
+        label = pl.col(self.label_col)
+
+        fold_col = pl.col(self.fold_col)
+        fold = pl.lit(fold, dtype=pl.dtype_of(fold_col))
+        val_fold_df = pl.scan_parquet(kfold_table_glob) \
+            .filter((fold_col == fold) & label.is_not_null()) \
+            .select('id', label.cast(pl.Int32))
+
+        train_fold_df = pl.scan_parquet(kfold_table_glob) \
+            .filter((fold_col != fold) & label.is_not_null()) \
+            .select('id', label.cast(pl.Int32))
+
+        train_df = data_df.join(train_fold_df, on='id', how='inner').drop('id')
+        val_df = data_df.join(val_fold_df, on='id', how='inner').drop('id')
+
+        return train_df, val_df
 
     def load_data(self,
                   fold: int,
@@ -252,56 +321,32 @@ class VQATTrainingJob(BaseModel):
 
         dataset = ParquetDataset(dataset_dir=self.dataset_dir)
 
-        train_query = get_data_query(
-            rings_col=self.rings_col,
-            rings_indexes=rings_indexes,
-            label_col=self.label_col,
-            fold_col=self.fold_col,
+        train_df, val_df = self.get_data(
+            ring_indexes=rings_indexes,
+            data_table_glob=dataset.get_table_glob(self.data_table),
+            kfold_table_glob=dataset.get_table_glob(self.kfold_table),
             fold=fold,
-            fold_signal='!=',
-            et_col=self.et_col,
             et_bin_left=et_bin_left,
             et_bin_right=et_bin_right,
-            eta_col=self.eta_col,
             eta_bin_left=eta_bin_left,
-            eta_bin_right=eta_bin_right,
-            data_table_glob=dataset.get_table_glob(self.data_table),
-            kfold_table_glob=dataset.get_table_glob(self.kfold_table)
+            eta_bin_right=eta_bin_right
         )
-
-        val_query = get_data_query(
-            rings_col=self.rings_col,
-            rings_indexes=rings_indexes,
-            label_col=self.label_col,
-            fold_col=self.fold_col,
-            fold=fold,
-            fold_signal='=',
-            et_col=self.et_col,
-            et_bin_left=et_bin_left,
-            et_bin_right=et_bin_right,
-            eta_col=self.eta_col,
-            eta_bin_left=eta_bin_left,
-            eta_bin_right=eta_bin_right,
-            data_table_glob=dataset.get_table_glob(self.data_table),
-            kfold_table_glob=dataset.get_table_glob(self.kfold_table)
-        )
-
-        with duckdb.connect(':memory:') as conn:
-            train_df = conn.execute(train_query) \
-                .fetch_arrow_table().to_pandas(types_mapper=pd.ArrowDtype)
-            val_df = conn.execute(val_query) \
-                .fetch_arrow_table().to_pandas(types_mapper=pd.ArrowDtype)
+        train_df, val_df = pl.collect_all([train_df, val_df])
 
         # The dataframes only have rings and the label,
         # we need to separate them and convert the rings to normalized and quantized numpy arrays
-        val_label = val_df.pop('label').values
-        val_rings = norm1(quantizer(val_df.values.astype(np.float32)))
+        val_label = val_df.drop_in_place(
+            self.label_col).to_numpy().flatten()
+        val_rings = val_df.to_numpy()
         del val_df  # Frees memory premptively
-        train_label = train_df.pop('label').values
-        train_rings = norm1(quantizer(train_df.values.astype(np.float32)))
-        del train_df
+        val_rings = quantizer(norm1(val_rings))
+        train_label = train_df.drop_in_place(
+            self.label_col).to_numpy().flatten()
+        train_rings = train_df.to_numpy()
+        del train_df  # Frees memory premptively
+        train_rings = quantizer(norm1(train_rings))
 
-        return train_rings, val_rings, train_label.astype(np.int32), val_label.astype(np.int32)
+        return train_rings, val_rings, train_label, val_label
 
     def load_ref(self,
                  et_bin_left: float,
@@ -331,6 +376,54 @@ class VQATTrainingJob(BaseModel):
 
         return ref
 
+    def run_training(self,
+                     et_bin_left: float,
+                     et_bin_right: float,
+                     eta_bin_left: float,
+                     eta_bin_right: float,
+                     fold: int,
+                     init: int,):
+
+        logger = get_logger()
+        logger.info(
+            f'Loading data for et_bin ({et_bin_left}, {et_bin_right}), eta_bin ({eta_bin_left}, {eta_bin_right}), fold {fold} and init {init}')
+        ref = self.load_ref(
+            et_bin_left=et_bin_left,
+            et_bin_right=et_bin_right,
+            eta_bin_left=eta_bin_left,
+            eta_bin_right=eta_bin_right
+        )
+        X, X_val, y, y_val = self.load_data(
+            fold=fold,
+            et_bin_left=et_bin_left,
+            et_bin_right=et_bin_right,
+            eta_bin_left=eta_bin_left,
+            eta_bin_right=eta_bin_right
+        )
+        output_dir = self.output_dir / f'et_{et_bin_left}_{et_bin_right}' / \
+            f'eta_{eta_bin_left}_{eta_bin_right}' / f'fold_{fold}_init_{init}'
+        output_dir.mkdir(parents=True, exist_ok=True)
+        training(
+            X=X,
+            y=y,
+            X_val=X_val,
+            y_val=y_val,
+            sort=fold,
+            init=init,
+            tag=self.tag,
+            loss='binary_crossentropy',
+            verbose=True,
+            ref=ref,
+            model=get_model(self.b0, self.i0),
+            output_dir=str(output_dir),
+            batch_size=self.batch_size,
+            dry_run=self.dry_run,
+            et_bin=(et_bin_left, et_bin_right),
+            eta_bin=(eta_bin_left, eta_bin_right)
+        )
+        logger.info(
+            f'Training completed for et_bin ({et_bin_left}, {et_bin_right}), eta_bin ({eta_bin_left}, {eta_bin_right}), fold {fold} and init {init}')
+
     def run(self):
         logger = get_logger()
         dataset = ParquetDataset(dataset_dir=str(self.dataset_dir))
@@ -348,58 +441,44 @@ class VQATTrainingJob(BaseModel):
             self.eta_bins[:-1],
             self.eta_bins[1:],
         )
+        executor = self.executor_config.get_executor()
         bins_iterator = product(et_bins_iterator, eta_bins_iterator)
-        for i, ((et_bin_left, et_bin_right), (eta_bin_left, eta_bin_right)) in enumerate(bins_iterator):
-            if i > 0 and self.dry_run:
-                logger.info('Dry run enabled, stopping after first bin.')
-                break
-            ref = self.load_ref(
-                et_bin_left=et_bin_left,
-                et_bin_right=et_bin_right,
-                eta_bin_left=eta_bin_left,
-                eta_bin_right=eta_bin_right
-            )
-            logger.info(
-                f'Running training for et_bin ({et_bin_left}, {et_bin_right}) and eta_bin ({eta_bin_left}, {eta_bin_right})')
-            for fold, init in product(folds_range, inits_range):
-                X, X_val, y, y_val = self.load_data(
-                    fold=fold,
-                    et_bin_left=et_bin_left,
-                    et_bin_right=et_bin_right,
-                    eta_bin_left=eta_bin_left,
-                    eta_bin_right=eta_bin_right
-                )
-                logger.info(
-                    f'Running training for fold {fold} and init {init}'
-                )
-                current_output_dir = self.output_dir / \
-                    f'fold_{fold}_init_{init}'
-                training(
-                    X=X,
-                    y=y,
-                    X_val=X_val,
-                    y_val=y_val,
-                    sort=fold,
-                    init=init,
-                    tag=self.tag,
-                    loss='binary_crossentropy',
-                    verbose=True,
-                    ref=ref,
-                    model=get_model(self.b0, self.i0),
-                    output_dir=str(current_output_dir),
-                    batch_size=self.batch_size,
-                    dry_run=self.dry_run,
-                    et_bin=(et_bin_left, et_bin_right),
-                    eta_bin=(eta_bin_left, eta_bin_right)
-                )
+        i = 0
+        with executor.batch():
+            for (et_bin_left, et_bin_right), (eta_bin_left, eta_bin_right) in bins_iterator:
+                if i > 0 and self.dry_run:
+                    logger.info('Dry run enabled, stopping after first bin.')
+                    break
+                for fold, init in product(folds_range, inits_range):
+                    logger.info(
+                        f'{i} - Submitting training job for et_bin ({et_bin_left}, {et_bin_right}), eta_bin ({eta_bin_left}, {eta_bin_right}), fold {fold} and init {init}')
+                    executor.submit(
+                        self.run_training,
+                        et_bin_left,
+                        et_bin_right,
+                        eta_bin_left,
+                        eta_bin_right,
+                        fold,
+                        init
+                    )
+                    i += 1
+
+        logger.info('All training jobs submitted.')
 
 
 app = typer.Typer(
-    help='Ringer Zero VQAT commands'
+    help='Ringer Zero VQAT commands',
+    rich_markup_mode="markdown"
 )
 
 
-@app.command()
+RUN_TRAINING_HELP = 'Run VQAT training jobs'
+
+
+@app.command(
+    short_help=RUN_TRAINING_HELP,
+    help=f'**{RUN_TRAINING_HELP}**\n\n{pydantic_to_markdown_schema(VQATTrainingJob)}'
+)
 def run_training(
     config: Annotated[
         Path,

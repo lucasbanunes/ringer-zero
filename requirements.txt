@@ -1,16 +1,19 @@
+awkward==2.9.0
 colorlog==6.10.1
 duckdb==1.4.4
 HGQ2==0.1.6
-jupyterlab==4.5.3
+jupyterlab==4.5.6
 onnx==1.20.1
 QKeras==0.9.0
 pandas==3.0.0
-pandera[pandas]==0.30.1
+pandera==0.30.1
+polars==1.39.3
 pyarrow==23.0.0
 pydantic==2.12.5
 pytest==9.0.2
 submitit==1.5.4
 tables==3.10.2
-tensorflow==2.20.0
+tensorflow==2.21.0
 typer==0.23.1
-# tf2onnx==1.16.1 Installing tfwonnx gives cannot import name 'runtime_version' from 'google.protobuf'
+# tf2onnx==1.16.1 Installing tf2onnx raises cannot import name 'runtime_version' from 'google.protobuf'
+uproot==5.7.2

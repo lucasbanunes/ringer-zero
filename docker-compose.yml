@@ -1,0 +1,13 @@
+name: ringer-zero
+services:
+  boosted-lorenzetti:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ${DOCKER_USERNAME}/ringer-zero:${DOCKER_TAG}
+    container_name: ringer-zero-container-${DOCKER_TAG}
+    volumes:
+      - ./:/root/workspaces/ringer-zero
+      - ~/logs:/root/logs
+      - ~/data:/root/data
+    tty: true
