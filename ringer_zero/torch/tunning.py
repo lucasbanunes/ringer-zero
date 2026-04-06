@@ -1,6 +1,5 @@
 import os
 import gc
-import json
 import pickle
 import numpy as np
 import torch
@@ -8,7 +7,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import TensorDataset, DataLoader
 from datetime import datetime
-from .callbacks import EarlyStoppingCheckpoint
+from .callbacks import EarlyStoppingCheckpoint, compute_sp
 
 
 def training_torch(
@@ -55,6 +54,7 @@ def training_torch(
         "val_loss": [],
         "accuracy": [],
         "val_accuracy": [],
+        "val_sp": [],
     }
 
     early_stopping = EarlyStoppingCheckpoint(patience=patience)
@@ -94,6 +94,9 @@ def training_torch(
             val_outputs = model(X_val_tensor)
             val_loss_tensor = criterion(val_outputs, y_val_tensor)
             val_loss = val_loss_tensor.item()
+            val_scores = torch.sigmoid(val_outputs).squeeze(1).detach().cpu().numpy()
+            val_targets = y_val_tensor.squeeze(1).detach().cpu().numpy()
+            val_sp = compute_sp(val_targets, val_scores)
 
             val_predicted = (torch.sigmoid(val_outputs) > 0.5).float()
             val_correct = (val_predicted == y_val_tensor).sum().item()
@@ -106,18 +109,22 @@ def training_torch(
         history["val_loss"].append(val_loss)
         history["accuracy"].append(train_accuracy)
         history["val_accuracy"].append(val_accuracy)
+        history["val_sp"].append(val_sp)
 
         if verbose and (epoch + 1) % 10 == 0:
             print(
                 f"Epoch {epoch + 1}/{max_epochs}, "
                 f"Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, "
-                f"Acc: {train_accuracy:.4f}, Val Acc: {val_accuracy:.4f}"
+                f"Acc: {train_accuracy:.4f}, Val Acc: {val_accuracy:.4f}, "
+                f"Val SP: {val_sp:.4f}"
             )
 
-        should_stop = early_stopping.step(model=model, val_loss=val_loss)
+        should_stop = early_stopping(model=model, metric=val_sp)
         if should_stop:
             if verbose:
-                print(f"Early stopping at epoch {epoch + 1}")
+                print(
+                    f"Early stopping at epoch {epoch + 1} (best val_sp={early_stopping.best_metric:.4f})"
+                )
             break
 
     end_time = datetime.now()
