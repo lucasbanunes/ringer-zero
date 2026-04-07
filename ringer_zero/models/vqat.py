@@ -99,7 +99,7 @@ def get_n_folds(kfold_table_glob: str, fold_col: str) -> int:
     ).select(
         pl.col(fold_col).max().alias('max_fold')
     ).collect().item()
-    return n_folds + 1 # Folds are 0-indexed
+    return n_folds + 1  # Folds are 0-indexed
 
 
 def norm1(data):

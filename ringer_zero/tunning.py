@@ -124,10 +124,7 @@ def training(
     #     filepath=output_dir + '/model.onnx',
     #     format='onnx'
     # )
-    model.export(
-        filepath=output_dir + '/model.tf',
-        format='tf_saved_model'
-    )
+    model.save(output_dir + '/model.keras')
     keras.backend.clear_session()
     del model
     gc.collect()
