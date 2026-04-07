@@ -212,3 +212,6 @@ out/
 
 # VSCode
 .vscode/
+
+# Misc
+jobs/**
