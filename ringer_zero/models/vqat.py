@@ -400,8 +400,7 @@ class VQATTrainingJob(BaseModel):
             eta_bin_left=eta_bin_left,
             eta_bin_right=eta_bin_right
         )
-        output_dir = self.output_dir / f'et_{et_bin_left}_{et_bin_right}' / \
-            f'eta_{eta_bin_left}_{eta_bin_right}' / f'fold_{fold}_init_{init}'
+        output_dir = self.output_dir / f'et_{et_bin_left}_{et_bin_right}' / f'eta_{eta_bin_left}_{eta_bin_right}'
         output_dir.mkdir(parents=True, exist_ok=True)
         training(
             X=X,
