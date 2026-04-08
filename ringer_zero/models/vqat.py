@@ -10,7 +10,6 @@ from hgq.config import QuantizerConfigScope
 from hgq.constraints import Constant
 from pydantic import BaseModel, Field
 import typer
-import duckdb
 import yaml
 import math
 import polars as pl
@@ -355,21 +354,15 @@ class VQATTrainingJob(BaseModel):
                  eta_bin_right: float
                  ) -> RefType:
         dataset = ParquetDataset(dataset_dir=self.dataset_dir)
-        ref_query = f"""
-        SELECT *
-        FROM read_parquet('{str(dataset.get_table_glob("ref"))}') as ref
-        WHERE ref.et_bin_lower = {et_bin_left} AND
-              ref.et_bin_upper = {et_bin_right} AND
-              ref.eta_bin_lower = {eta_bin_left} AND
-              ref.eta_bin_upper = {eta_bin_right};
-        """
+        ref_df = pl.scan_parquet(dataset.get_table_glob("ref")) \
+            .filter((pl.col('et_bin_lower') == et_bin_left) &
+                    (pl.col('et_bin_upper') == et_bin_right) &
+                    (pl.col('eta_bin_lower') == eta_bin_left) &
+                    (pl.col('eta_bin_upper') == eta_bin_right)
+            ).collect()
         ref = defaultdict(lambda: defaultdict(dict))
-        with duckdb.connect(':memory:') as conn:
-            ref_df = conn.execute(ref_query).fetch_df()
-
-        for _, row in ref_df.iterrows():
-            ref[row['criteria']][row['sample_type']
-                                 ][row['total_or_passed']] = row['value']
+        for row in ref_df.iter_rows(named=True):
+            ref[row['criteria']][row['sample_type']][row['total_or_passed']] = row['value']
         for key in ref:
             ref[key] = dict(ref[key])
         ref = dict(ref)

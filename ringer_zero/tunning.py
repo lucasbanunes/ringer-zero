@@ -6,8 +6,9 @@ import pickle
 import numpy as np
 from tensorflow import keras
 from sklearn.model_selection import StratifiedKFold
-from datetime import datetime
+from datetime import datetime, timedelta
 from keras import Model
+from typing import TypedDict
 #
 # Set GPU memory control
 #
@@ -32,6 +33,22 @@ from . import check_batch_size, class_weight, logger
 type RefType = dict[str, dict[str, dict[str, float]]]
 
 
+class MetadataDict(TypedDict):
+    et_bin: list[str]
+    eta_bin: list[str]
+    sort: int
+    init: int
+    tag: str
+
+
+class ResultsDict(TypedDict):
+    history: dict[str, list[float] | float | int]
+    model: dict
+    weights: list[np.ndarray]
+    metadata: MetadataDict
+    time: timedelta
+
+
 def training(
         X: np.ndarray,
         y: np.ndarray,
@@ -53,17 +70,20 @@ def training(
         callbacks=None,
         patience: int = 25,
         detailed=False,
-        dry_run: bool = False):
+        dry_run: bool = False) -> ResultsDict:
 
     if callbacks is None:
         callbacks = []
 
     output_dir = output_dir + \
         '/tuned.%s.sort_%d.init_%d.model' % (tag, sort, init)
-    if os.path.exists(output_dir):
-        print('Output already exists')
+    results_path = output_dir + '/results.pic'
+    model_path = output_dir + '/model.keras'
+    if os.path.exists(results_path) and os.path.exists(model_path):
+        print('Output already exists. Skipping training step.')
         return
-    os.makedirs(output_dir, exist_ok=True)
+    else:
+        os.makedirs(output_dir, exist_ok=True)
 
     model.compile(optimizer, loss=loss, metrics=metrics)
     model.summary()
@@ -117,18 +137,18 @@ def training(
          },
          'time': (end-start)}
 
-    with open(output_dir + '/results.pic', 'wb') as f:
+    with open(results_path, 'wb') as f:
         pickle.dump(d, f)
 
     # model.export(
     #     filepath=output_dir + '/model.onnx',
     #     format='onnx'
     # )
-    model.save(output_dir + '/model.keras')
+    model.save(model_path)
     keras.backend.clear_session()
     del model
     gc.collect()
-    return history
+    return d
 
 
 def reprocessing(args, data_loader, detailed=False):
