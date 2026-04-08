@@ -2,23 +2,66 @@
 from collections import defaultdict
 from itertools import product
 from pathlib import Path
-from typing import Annotated
+import pickle
+from typing import Annotated, Literal
 import numpy as np
-from keras import Sequential
+from keras import Sequential, Model
+from keras.models import load_model
 import hgq.layers as qlayers
 from hgq.config import QuantizerConfigScope
 from hgq.constraints import Constant
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict, computed_field
 import typer
 import yaml
 import math
 import polars as pl
+from functools import cached_property
 
-from ringer_zero.tunning import training, RefType
-from ringer_zero import get_logger
-from ringer_zero.datasets import ParquetDataset
+from ..tunning import training, RefType
+from .. import get_logger
+from ..datasets import ParquetDataset
 from ..submitit import ExecutorConfig
 from ..utils import pydantic_to_markdown_schema
+
+
+def get_ring_slices_per_layer(fraction: int) -> list[int]:
+    # We select 1/fraction of rings in each layer
+    # pre-sample - 8 rings
+    # EM1 - 64 rings
+    # EM2 - 8 rings
+    # EM3 - 8 rings
+    # Had1 - 4 rings
+    # Had2 - 4 rings
+    # Had3 - 4 rings
+    rings_indexes = []
+    # rings presmaple
+    rings_indexes += list(range(8//fraction))
+
+    # EM1 list
+    sum_rings = 8
+    rings_indexes += list(range(sum_rings, sum_rings+(64//fraction)))
+
+    # EM2 list
+    sum_rings = 8+64
+    rings_indexes += list(range(sum_rings, sum_rings+(8//fraction)))
+
+    # EM3 list
+    sum_rings = 8+64+8
+    rings_indexes += list(range(sum_rings, sum_rings+(8//fraction)))
+
+    # HAD1 list
+    sum_rings = 8+64+8+8
+    rings_indexes += list(range(sum_rings, sum_rings+(4//fraction)))
+
+    # HAD2 list
+    sum_rings = 8+64+8+8+4
+    rings_indexes += list(range(sum_rings, sum_rings+(4//fraction)))
+
+    # HAD3 list
+    sum_rings = 8+64+8+8+4+4
+    rings_indexes += list(range(sum_rings, sum_rings+(4//fraction)))
+
+    return rings_indexes
 
 
 def get_model(b0: int, i0: int) -> Sequential:
@@ -105,6 +148,135 @@ def norm1(data):
     norms = np.abs(data.sum(axis=1))
     norms[norms == 0] = 1
     return data/norms[:, None]
+
+
+class VariableBin(BaseModel):
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    col: pl.Expr | str
+    lower: float
+    upper: float
+    closed: Literal['left', 'right', 'both', 'none'] = 'left'
+
+    def model_post_init(self, context):
+        if isinstance(self.col, str):
+            self.col = pl.col(self.col)
+        return super().model_post_init(context)
+
+    @computed_field(
+        repr=False,
+        description="Polars condition for this bin",
+    )
+    @cached_property
+    def is_inside_bin_polars(self) -> pl.Expr:
+        return self.col.is_between(self.lower, self.upper, closed=self.closed)
+
+    def is_inside_numpy(self, value):
+        if self.closed == 'left':
+            return self.lower <= value < self.upper
+        elif self.closed == 'right':
+            return self.lower < value <= self.upper
+        elif self.closed == 'both':
+            return self.lower <= value <= self.upper
+        else:
+            return self.lower < value < self.upper
+
+
+class BinnedKerasModel(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    bins: list[VariableBin]
+    features: list[str | pl.Expr]
+    model: Path | Model
+
+    def model_post_init(self, context):
+        if isinstance(self.model, Path):
+            self.model = load_model(self.model)
+        self.features = [pl.col(feature) if isinstance(
+            feature, str) else feature for feature in self.features]
+
+    @computed_field(
+        repr=False,
+        description="Polars condition for this model",
+    )
+    @cached_property
+    def valid_bin_polars_expr(self) -> pl.Expr:
+        return pl.all_horizontal([bin.is_inside_bin_polars for bin in self.bins])
+
+    @computed_field(
+        repr=False,
+        description="Polars expression for the model prediction",
+    )
+    @cached_property
+    def predict_polars_expr(self) -> pl.Expr:
+        return self.input_col.map_batches(
+            self.predict_polars_batch, return_dtype=pl.Float32
+        )
+
+    def predict_polars_batch(self, batch: pl.Series) -> pl.Series:
+        data = quantizer(norm1(np.stack(batch.to_numpy()))).astype(np.float32)
+        prediction = self.model.predict(data)
+        return pl.Series(prediction.flatten(), dtype=pl.Float32)
+
+    def predict(self, data: np.ndarray) -> np.ndarray:
+        data = quantizer(norm1(data)).astype(np.float32)
+        prediction = self.model.predict(data)
+        return prediction.flatten()
+
+
+class BinnedKerasMoE(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    models: list[BinnedKerasModel]
+
+    @computed_field(
+        repr=False,
+        description="Polars expression for the MoE prediction",
+    )
+    @cached_property
+    def predict_polars_expr(self) -> pl.Expr:
+        first_model = self.models[0]
+        prediction_col = pl.when(
+            first_model.valid_bin_polars_expr,
+        ).then(
+            first_model.predict_polars_expr
+        )
+        for model in self.models[1:]:
+            prediction_col = prediction_col.when(
+                model.valid_bin_polars_expr
+            ).then(
+                model.predict_polars_expr
+            )
+        prediction_col = prediction_col.otherwise(
+            pl.lit(None, dtype=pl.Float32)
+        )
+        return prediction_col
+
+    def predict(self, data: pl.LazyFrame | pl.DataFrame) -> pl.DataFrame:
+        prediction_df = []
+        for model in self.models:
+            filter_condition = pl.all_horizontal(
+                *(feature.is_not_null() for feature in model.features),
+                model.valid_bin_polars_expr
+            )
+            filtered = data.filter(filter_condition).select(
+                'id',
+                *model.features
+            )
+            if isinstance(filtered, pl.LazyFrame):
+                filtered = filtered.collect()
+            if filtered.is_empty():
+                filtered.clear()  # Frees memory premptively
+                continue
+            features = filtered.select(pl.exclude('id')).to_numpy()
+            filtered = filtered.drop(pl.exclude('id'))
+            prediction = model.predict(features).astype(np.float32)
+            del features    # Frees memory premptively
+            filtered = filtered.with_columns(
+                pl.Series(prediction).alias('prediction'))
+            prediction_df.append(filtered)
+        return pl.concat(prediction_df)
 
 
 class VQATTrainingJob(BaseModel):
@@ -282,46 +454,12 @@ class VQATTrainingJob(BaseModel):
                   eta_bin_left: float,
                   eta_bin_right: float) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Load training and validation data for the given fold."""
-        # We select 1/2 of rings in each layer
-        # pre-sample - 8 rings
-        # EM1 - 64 rings
-        # EM2 - 8 rings
-        # EM3 - 8 rings
-        # Had1 - 4 rings
-        # Had2 - 4 rings
-        # Had3 - 4 rings
-        rings_indexes = []
-        # rings presmaple
-        rings_indexes += list(range(8//2))
 
-        # EM1 list
-        sum_rings = 8
-        rings_indexes += list(range(sum_rings, sum_rings+(64//2)))
-
-        # EM2 list
-        sum_rings = 8+64
-        rings_indexes += list(range(sum_rings, sum_rings+(8//2)))
-
-        # EM3 list
-        sum_rings = 8+64+8
-        rings_indexes += list(range(sum_rings, sum_rings+(8//2)))
-
-        # HAD1 list
-        sum_rings = 8+64+8+8
-        rings_indexes += list(range(sum_rings, sum_rings+(4//2)))
-
-        # HAD2 list
-        sum_rings = 8+64+8+8+4
-        rings_indexes += list(range(sum_rings, sum_rings+(4//2)))
-
-        # HAD3 list
-        sum_rings = 8+64+8+8+4+4
-        rings_indexes += list(range(sum_rings, sum_rings+(4//2)))
-
+        ring_indexes = get_ring_slices_per_layer(fraction=2)
         dataset = ParquetDataset(dataset_dir=self.dataset_dir)
 
         train_df, val_df = self.get_data(
-            ring_indexes=rings_indexes,
+            ring_indexes=ring_indexes,
             data_table_glob=dataset.get_table_glob(self.data_table),
             kfold_table_glob=dataset.get_table_glob(self.kfold_table),
             fold=fold,
@@ -359,10 +497,11 @@ class VQATTrainingJob(BaseModel):
                     (pl.col('et_bin_upper') == et_bin_right) &
                     (pl.col('eta_bin_lower') == eta_bin_left) &
                     (pl.col('eta_bin_upper') == eta_bin_right)
-            ).collect()
+                    ).collect()
         ref = defaultdict(lambda: defaultdict(dict))
         for row in ref_df.iter_rows(named=True):
-            ref[row['criteria']][row['sample_type']][row['total_or_passed']] = row['value']
+            ref[row['criteria']][row['sample_type']
+                                 ][row['total_or_passed']] = row['value']
         for key in ref:
             ref[key] = dict(ref[key])
         ref = dict(ref)
@@ -393,7 +532,9 @@ class VQATTrainingJob(BaseModel):
             eta_bin_left=eta_bin_left,
             eta_bin_right=eta_bin_right
         )
-        output_dir = self.output_dir / f'et_{et_bin_left}_{et_bin_right}' / f'eta_{eta_bin_left}_{eta_bin_right}'
+        output_dir = self.output_dir / \
+            f'et_{et_bin_left}_{et_bin_right}' / \
+            f'eta_{eta_bin_left}_{eta_bin_right}'
         output_dir.mkdir(parents=True, exist_ok=True)
         training(
             X=X,
@@ -457,6 +598,123 @@ class VQATTrainingJob(BaseModel):
 
         logger.info('All training jobs submitted.')
 
+    @staticmethod
+    def load_model(results_dir: Path, eta_col: str, et_col: str, rings_col: str) -> BinnedKerasMoE:
+        results = []
+        logger = get_logger()
+        expected_cols = {
+            'et_bin_lower', 'et_bin_upper', 'eta_bin_lower', 'eta_bin_upper',
+            'sort', 'init', 'tag', 'model', 'time'
+        }
+
+        for i, individual_fit_dir in enumerate(results_dir.glob('*/*/*')):
+            logger.info(f'{i} - Processing {individual_fit_dir}')
+            with open(individual_fit_dir / 'results.pic', 'rb') as f:
+                d = pickle.load(f)
+            record = {}
+            record['et_bin_lower'] = float(d['metadata'].get('et_bin')[0])
+            record['et_bin_upper'] = float(d['metadata'].get('et_bin')[1])
+            record['eta_bin_lower'] = float(d['metadata'].get('eta_bin')[0])
+            record['eta_bin_upper'] = float(d['metadata'].get('eta_bin')[1])
+            record['sort'] = int(d['metadata'].get('sort'))
+            record['init'] = (int(d['metadata'].get('init')))
+            record['tag'] = (d['metadata'].get('tag'))
+            record['model'] = (str(individual_fit_dir / 'model.keras'))
+            record['time'] = (d.get('time'))
+
+            summary_dict = d['history'].pop('summary')
+            if not summary_dict:
+                raise ValueError(
+                    f'Summary dictionary is empty for {individual_fit_dir}')
+            for key, value in summary_dict.items():
+                if isinstance(value, (int, float, str)):
+                    record[f'summary.{key}'] = value
+                    expected_cols.add(f'summary.{key}')
+                elif isinstance(value, tuple):
+                    metric, approved, total = value
+                    record[f'summary.{key}'] = metric
+                    record[f'summary.{key}.approved'] = approved
+                    record[f'summary.{key}.total'] = total
+                    expected_cols.update(
+                        {f'summary.{key}', f'summary.{key}.approved', f'summary.{key}.total'})
+                else:
+                    raise ValueError(
+                        f'Unsupported type for summary key {key}: {type(value)}')
+
+            reference_dict = d['history'].pop('reference')
+            if reference_dict:
+                for criteria, criteria_metrics in reference_dict.items():
+                    for metric, metric_values in criteria_metrics.items():
+                        if isinstance(metric_values, (int, float, str)):
+                            col = f'reference.{criteria}.{metric}'
+                            record[col] = metric_values
+                            expected_cols.add(col)
+                        elif isinstance(metric_values, tuple):
+                            value, approved, total = metric_values
+                            value_col = f'reference.{criteria}.{metric}'
+                            approved_col = f'reference.{criteria}.{metric}.approved'
+                            total_col = f'reference.{criteria}.{metric}.total'
+                            record[value_col] = value
+                            record[approved_col] = approved
+                            record[total_col] = total
+                            expected_cols.update(
+                                {value_col, approved_col, total_col})
+            else:
+                logger.warning(
+                    f'Reference dictionary is empty for {individual_fit_dir}')
+
+            for metric_name, metric_values in d['history'].items():
+                if isinstance(metric_values, list) and all(isinstance(v, (int, float)) for v in metric_values):
+                    record[f'history.{metric_name}'] = metric_values
+                elif isinstance(metric_values, (int, float)):
+                    record[f'history.{metric_name}'] = metric_values
+                else:
+                    logger.warning(
+                        f'Skipping metric {metric_name} with non-numeric values for {individual_fit_dir}')
+            results.append(record)
+
+        for record in results:
+            for col in expected_cols:
+                if col not in record:
+                    record[col] = None
+
+        results = pl.from_records(results, infer_schema_length=1000).sort(
+            ['et_bin_lower', 'eta_bin_lower', 'sort', 'init']).with_row_index('id')
+        best_models = results.group_by(
+            ['et_bin_lower', 'et_bin_upper', 'eta_bin_lower', 'eta_bin_upper']
+        ).agg(
+            pl.all().sort_by('summary.max_sp_val', descending=True).first()
+        ).sort('id')
+
+        ring_indexes = get_ring_slices_per_layer(fraction=2)
+        models = []
+        for row in best_models.iter_rows(named=True):
+            bins = [
+                dict(
+                    col=pl.col(eta_col).abs(),
+                    lower=row['eta_bin_lower'],
+                    upper=row['eta_bin_upper'],
+                    closed='left'
+                ),
+                dict(
+                    col=pl.col(et_col),
+                    lower=row['et_bin_lower'],
+                    upper=row['et_bin_upper'],
+                    closed='left'
+                )
+            ]
+            model = dict(
+                bins=bins,
+                features=[
+                    pl.col(rings_col).list.get(ring_index).alias(
+                        f'{rings_col}[{ring_index}]') for ring_index in ring_indexes
+                ],
+                model=row['model']
+            )
+            models.append(model)
+        selected_model = BinnedKerasMoE(models=models)
+        return selected_model
+
 
 app = typer.Typer(
     help='Ringer Zero VQAT commands',
@@ -482,3 +740,72 @@ def run_training(
 ):
     job = VQATTrainingJob.from_yaml(config)
     job.run()
+
+
+@app.command(
+
+)
+def add_inference(
+    dataset_dir: Annotated[
+        Path,
+        typer.Option(
+            '--dataset-dir',
+            help='Directory containing the parquet dataset'
+        )
+    ],
+    results_dir: Annotated[
+        Path,
+        typer.Option(
+            '--results-dir',
+            help='Directory containing the training results to add inference to'
+        )
+    ],
+    features_table: Annotated[
+        str,
+        typer.Option(
+            '--features-table',
+            help='Name of the table containing the features to run inference on'
+        )
+    ],
+    inference_table: Annotated[
+        str,
+        typer.Option(
+            '--inference-table',
+            help='Name of the table to save the inference results'
+        )
+    ],
+    eta_col: Annotated[
+        str,
+        typer.Option(
+            '--eta-col',
+            help='Name of the eta column in the data table'
+        )
+    ] = 'TrigEMClusterContainer.eta',
+    et_col: Annotated[
+        str,
+        typer.Option(
+            '--et-col',
+            help='Name of the et column in the data table'
+        )
+    ] = 'TrigEMClusterContainer.et',
+    rings_col: Annotated[
+        str,
+        typer.Option(
+            '--rings-col',
+            help='Name of the rings column in the data table'
+        )
+    ] = 'TrigEMClusterContainer.ringsE'
+):
+    loaded_model = VQATTrainingJob.load_model(
+        results_dir, eta_col, et_col, rings_col
+    )
+    parquet_dataset = ParquetDataset(dataset_dir=dataset_dir)
+    features_df = pl.scan_parquet(
+        parquet_dataset.get_table_glob(features_table))
+    prediction_df = loaded_model.predict(features_df)
+    prediction_df.write_parquet(
+        pl.PartitionBy(
+            str(parquet_dataset.get_table_path(inference_table)),
+            max_rows_per_file=100_000,
+        ), compression='snappy')
+    return prediction_df

@@ -1,8 +1,10 @@
+import polars as pl
 import logging
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from ringer_zero.models.vqat import VQATTrainingJob
+from ringer_zero.datasets import ParquetDataset
+from ringer_zero.models.vqat import VQATTrainingJob, add_inference
 from ringer_zero.submitit import ExecutorConfig
 
 
@@ -72,3 +74,15 @@ def test_vqat_training_job_from_yaml(test_data_dir: Path):
         )
         job.run()
         logging.info(f'Output files: {list(output_dir.glob("*"))}')
+
+
+def test_add_inference(test_data_dir: Path):
+    dataset_dir = test_data_dir / "test_dataset"
+    add_inference(
+        results_dir=test_data_dir / 'test_vqat_results',
+        dataset_dir=dataset_dir,
+        features_table='electron_ringer',
+        inference_table='vqat_inference_results'
+    )
+    dataset = ParquetDataset(dataset_dir=dataset_dir)
+    pl.read_parquet(dataset.get_table_path('vqat_inference_results'))
