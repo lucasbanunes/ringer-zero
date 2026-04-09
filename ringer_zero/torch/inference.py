@@ -1,4 +1,5 @@
 import re
+import gc
 from pathlib import Path
 from tqdm import tqdm
 import pandas as pd
@@ -9,30 +10,22 @@ from ..datasets import ParquetDataset
 from ..models.vkan import get_model, norm1
 
 
-DEFAULT_DATASET_DIR = Path("/home/pedro/cern/data/mc21_isabela_qt_no_restriction")
-
-ET_COL = "TrigEMClusterContainer.et"
-ETA_COL = "TrigEMClusterContainer.eta"
-RINGS_COL = "TrigEMClusterContainer.ringsE"
-LABEL_COL = "label"
-FOLD_COL = "kfold"
-DATA_TABLE = "electron_ringer.parquet"
-KFOLD_TABLE = "standard_binning_kfold.parquet"
-
-
 def load_model(
     model_path: Path,
     grid_size: int = 5,
     spline_order: int = 3,
+    device: torch.device | str = "cpu",
 ) -> torch.nn.Module:
     if model_path.is_dir():
         model_path = model_path / "model_weights.pth"
 
-    state_dict = torch.load(model_path, map_location="cpu")
+    device = torch.device(device)
+    state_dict = torch.load(model_path, map_location=device)
     input_dim = state_dict["layers.0.base_weight"].shape[1]
 
     model = get_model(input_dim, grid_size, spline_order)
     model.load_state_dict(state_dict)
+    model.to(device)
     return model
 
 
@@ -104,7 +97,7 @@ def _select_best_model_dirs(model_dirs: list[Path]) -> list[dict[str, object]]:
         tuple[tuple[float, float], tuple[float, float]], dict[str, object]
     ] = {}
 
-    for model_dir in tqdm(model_dirs):
+    for model_dir in model_dirs:
         et_bin, eta_bin, fold, init = parse_model_dir(model_dir)
         val_sp = _load_val_sp(model_dir)
         region_key = (et_bin, eta_bin)
@@ -144,7 +137,6 @@ def _get_ring_indexes() -> list[int]:
 
 
 def _load_val_data_with_metadata(
-    fold: int,
     et_bin: tuple[float, float],
     eta_bin: tuple[float, float],
     dataset_dir: Path,
@@ -154,7 +146,6 @@ def _load_val_data_with_metadata(
     eta_col: str,
     rings_col: str,
     label_col: str,
-    fold_col: str,
 ) -> tuple[torch.Tensor, pd.DataFrame]:
     dataset = ParquetDataset(dataset_dir=dataset_dir)
     ring_indexes = _get_ring_indexes()
@@ -175,35 +166,37 @@ def _load_val_data_with_metadata(
         )
     )
 
-    val_fold_df = (
-        pl.scan_parquet(dataset.get_table_glob(kfold_table))
-        # .filter((pl.col(fold_col) == fold) & pl.col(label_col).is_not_null())
-        .select(
-            "id",
-            pl.col(fold_col).cast(pl.Int32).alias("kfold"),
-            pl.col(label_col).cast(pl.Int32).alias("label"),
-        )
+    val_fold_df = pl.scan_parquet(dataset.get_table_glob(kfold_table)).select(
+        "id",
+        pl.col(label_col).cast(pl.Int32).alias("label"),
     )
 
     val_df = data_df.join(val_fold_df, on="id", how="inner").collect()
     val_rings = norm1(val_df.select(ring_cols).to_numpy().astype("float32"))
     val_X = torch.as_tensor(val_rings, dtype=torch.float32)
 
-    metadata_df = val_df.select("id", "kfold", "label").to_pandas()
+    metadata_df = val_df.select("id", "label").to_pandas()
     return val_X, metadata_df
 
 
 def model_inference(
     model_path: str | Path,
-    dataset_dir: Path = DEFAULT_DATASET_DIR,
-    data_table: str = DATA_TABLE,
-    kfold_table: str = KFOLD_TABLE,
-    et_col: str = ET_COL,
-    eta_col: str = ETA_COL,
-    rings_col: str = RINGS_COL,
-    label_col: str = LABEL_COL,
-    fold_col: str = FOLD_COL,
+    dataset_dir: Path,
+    data_table: str,
+    kfold_table: str,
+    et_col: str,
+    eta_col: str,
+    rings_col: str,
+    label_col: str,
+    device: torch.device | str = "cpu",
+    clear_cuda_cache: bool = True,
 ) -> pd.DataFrame:
+    device = torch.device(device)
+    if device.type == "cuda" and not torch.cuda.is_available():
+        raise RuntimeError(
+            "No CUDA device available, but 'cuda' was specified. Please check your PyTorch installation and CUDA setup."
+        )
+
     model_path = Path(model_path)
     model_dirs = _discover_model_dirs(model_path)
     best_model_dirs = _select_best_model_dirs(model_dirs)
@@ -213,11 +206,9 @@ def model_inference(
         model_dir = model_info["model_dir"]
         et_bin = model_info["et_bin"]
         eta_bin = model_info["eta_bin"]
-        fold = model_info["fold"]
-        model = load_model(model_path=model_dir)
+        model = load_model(model_path=model_dir, device=device)
 
         val_X, metadata_df = _load_val_data_with_metadata(
-            fold=fold,
             et_bin=et_bin,
             eta_bin=eta_bin,
             dataset_dir=dataset_dir,
@@ -227,11 +218,11 @@ def model_inference(
             eta_col=eta_col,
             rings_col=rings_col,
             label_col=label_col,
-            fold_col=fold_col,
         )
+        val_X = val_X.to(device)
 
         model.eval()
-        with torch.no_grad():
+        with torch.inference_mode():
             logits = model(val_X)
             output = torch.sigmoid(logits).squeeze(1).detach().cpu().numpy()
             logits_np = logits.squeeze(1).detach().cpu().numpy()
@@ -249,5 +240,12 @@ def model_inference(
                 ]
             ]
         )
+
+        del logits, output, logits_np, val_X, model, output_df, metadata_df
+
+        if device.type == "cuda" and clear_cuda_cache:
+            gc.collect()
+            torch.cuda.empty_cache()
+            torch.cuda.ipc_collect()
 
     return pd.concat(output_frames, ignore_index=True)
