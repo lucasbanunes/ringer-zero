@@ -206,6 +206,7 @@ def model_inference(
         model_dir = model_info["model_dir"]
         et_bin = model_info["et_bin"]
         eta_bin = model_info["eta_bin"]
+        fold = model_info["fold"]
         model = load_model(model_path=model_dir, device=device)
 
         val_X, metadata_df = _load_val_data_with_metadata(
@@ -230,6 +231,11 @@ def model_inference(
         output_df = metadata_df.copy()
         output_df["output"] = output
         output_df["logits"] = logits_np
+        output_df["fold"] = fold
+        output_df["et_bin_left"] = et_bin[0]
+        output_df["et_bin_right"] = et_bin[1]
+        output_df["eta_bin_left"] = eta_bin[0]
+        output_df["eta_bin_right"] = eta_bin[1]
 
         output_frames.append(
             output_df[
@@ -237,6 +243,11 @@ def model_inference(
                     "id",
                     "output",
                     "logits",
+                    "fold",
+                    "et_bin_left",
+                    "et_bin_right",
+                    "eta_bin_left",
+                    "eta_bin_right",
                 ]
             ]
         )
