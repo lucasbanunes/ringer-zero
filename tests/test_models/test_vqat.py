@@ -3,25 +3,28 @@ import logging
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+from ringer_zero.models import vqat as vqat_module
 from ringer_zero.datasets import ParquetDataset
 from ringer_zero.models.vqat import VQATTrainingJob, add_inference
 from ringer_zero.submitit import ExecutorConfig
 
 
-def test_vqat_training_job(test_data_dir: Path):
+def test_vqat_training_job(test_data_dir: Path, monkeypatch):
     with TemporaryDirectory() as output_dir:
         logging.info(f'Saving results to {output_dir}')
         dataset_dir = test_data_dir / "test_dataset"
         output_dir = Path(output_dir)
+        monkeypatch.setattr(vqat_module, 'get_n_folds',
+                            lambda *args, **kwargs: 2)
 
         job = VQATTrainingJob(
             dataset_dir=dataset_dir,
-            data_table='data',
-            rings_col='trig_L2_calo_rings',
+            data_table='electron_ringer',
+            rings_col='TrigEMClusterContainer.ringsE',
             kfold_table='standard_binning_kfold',
             label_col='label',
-            fold_col='fold',
-            et_col='trig_L2_calo_et',
+            fold_col='kfold',
+            et_col='TrigEMClusterContainer.et',
             et_bins=(
                 15000.0,
                 20000.0,
@@ -30,7 +33,7 @@ def test_vqat_training_job(test_data_dir: Path):
                 50000.0,
                 float('inf')
             ),
-            eta_col='trig_L2_calo_eta',
+            eta_col='TrigEMClusterContainer.eta',
             eta_bins=(
                 0.0,
                 0.8,

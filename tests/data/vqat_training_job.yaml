@@ -1,29 +1,21 @@
-data_table: data
-rings_col: trig_L2_calo_rings
+data_table: electron_ringer
+rings_col: TrigEMClusterContainer.ringsE
 kfold_table: standard_binning_kfold
 label_col: label
-fold_col: fold
-et_col: trig_L2_calo_et
+fold_col: kfold
+et_col: TrigEMClusterContainer.et
 et_bins:
     - 15000.0
     - 20000.0
-    - 30000.0
-    - 40000.0
-    - 50000.0
-    - .inf
-eta_col: trig_L2_calo_eta
+eta_col: TrigEMClusterContainer.eta
 eta_bins:
     - 0.0
     - 0.8
-    - 1.37
-    - 1.54
-    - 2.37
-    - 2.5
 tag: vqat
 b0: 22
 i0: 7
 batch_size: 32
-inits: 5
+inits: 2
 dry_run: true
 executor_config:
     cpus_per_task: 1
