@@ -271,6 +271,11 @@ def _load_val_data_with_metadata(
     return val_X, metadata_df
 
 
+def select_models(path: Path) -> list[dict[str, object]]:
+    model_dirs = _discover_model_dirs(path)
+    return _select_best_model_dirs(model_dirs)
+
+
 def model_inference(
     model_path: str | Path,
     dataset_dir: Path,
@@ -286,10 +291,6 @@ def model_inference(
     show_progress: bool = True,
 ) -> pd.DataFrame:
     dataset = ParquetDataset(dataset_dir=dataset_dir)
-
-    def select_models(path: Path) -> list[dict[str, object]]:
-        model_dirs = _discover_model_dirs(path)
-        return _select_best_model_dirs(model_dirs)
 
     def infer_model(
         model_info: dict[str, object], infer_device: torch.device
