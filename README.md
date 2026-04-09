@@ -56,6 +56,7 @@ i0: 7
 batch_size: 1024
 inits: 5
 dry_run: false
+engine: tensorflow
 executor_config:
   cpus_per_task: 1
   executor_type: debug
@@ -70,6 +71,7 @@ executor_config:
 Notes:
 - `dataset_dir` must contain the parquet tables used by `data_table`, `kfold_table`, and `ref`.
 - `et_bins` and `eta_bins` define bin edges. Training runs for each adjacent bin interval.
+- `engine` selects the training engine used by the job.
 - `executor_config.executor_type` controls execution backend (for local/debug usage, keep `debug`).
 - `dry_run: true` submits only the first bin combination and is useful to validate configuration.
 
@@ -81,8 +83,21 @@ python cli.py vqat run-training --help
 
 ## 2) Run training
 
+If you want to train with other models, check availabilty or implement at [models](./ringer_zero/models/) and use:
+```bash
+python cli.py your_model run-training --config configs/your_model_config.yaml
+```
+
+### Available Models
+
+- [vQAT (Quantization Aware Training)](./ringer_zero/models/vqat.py)
 ```bash
 python cli.py vqat run-training --config configs/vqat_training_job.yaml
+```
+
+- [vKAN (Kolmogorov–Arnold Networks)](./ringer_zero/models/vkan.py)
+```bash
+python cli.py vkan run-training --config configs/vkan_training_job.yaml
 ```
 
 ## Useful CLI extras

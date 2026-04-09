@@ -19,18 +19,19 @@ eta_bins:
     - 1.54
     - 2.37
     - 2.5
-tag: vqat
-b0: 22
-i0: 7
+tag: vkan
+grid_size: 5
+spline_order: 3
 batch_size: 32
-inits: 5
+inits: 1
+epochs: 5
+patience: 2
 dry_run: true
-engine: tensorflow
 executor_config:
     cpus_per_task: 1
     executor_type: debug
     logs_dir: ./logs
-    name: test_vqat_training_job
+    name: test_vkan_training_job
     slurm_array_parallelism: 1
     slurm_partition: null
     stderr_to_stdout: true
