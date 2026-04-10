@@ -525,7 +525,7 @@ class MLPTrainingJob(BaseModel):
         logger.info('All training jobs submitted.')
 
     @staticmethod
-    def load_model(results_dir: Path, eta_col: str, et_col: str, rings_col: str) -> BinnedKerasMoE:
+    def load_model(results_dir: Path, eta_col: str, et_col: str, rings_col: str) -> tuple[pl.DataFrame, pl.DataFrame, BinnedKerasMoE]:
         results = []
         logger = get_logger()
         expected_cols = {
@@ -639,7 +639,7 @@ class MLPTrainingJob(BaseModel):
             )
             models.append(model)
         selected_model = BinnedKerasMoE(models=models)
-        return selected_model
+        return results, best_models, selected_model
 
 
 app = typer.Typer(
@@ -722,9 +722,13 @@ def add_inference(
         )
     ] = 'TrigEMClusterContainer.ringsE'
 ):
-    loaded_model = MLPTrainingJob.load_model(
+    results, best_models, loaded_model = MLPTrainingJob.load_model(
         results_dir, eta_col, et_col, rings_col
     )
+    results.write_parquet(results_dir / 'all_results.parquet')
+    best_models.write_parquet(results_dir / 'best_models.parquet')
+    results.clear()  # Frees memory premptively
+    best_models.clear()  # Frees memory premptively
     parquet_dataset = ParquetDataset(dataset_dir=dataset_dir)
     features_df = pl.scan_parquet(
         parquet_dataset.get_table_glob(features_table))
