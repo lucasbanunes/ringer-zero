@@ -217,3 +217,11 @@ out/
 
 # VSCode
 .vscode/
+
+op_points/
+plots_fake_rejection@90/
+qt_data_mc21_5m/
+references/
+vqat-b22-i7/
+
+
