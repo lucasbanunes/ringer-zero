@@ -5,9 +5,8 @@ from pydantic.fields import PydanticUndefined
 
 
 def walk_paths(
-        paths: str | Path | Iterable[str | Path],
-        file_ext: str,
-        dev: bool = False) -> Iterator[Path]:
+    paths: str | Path | Iterable[str | Path], file_ext: str, dev: bool = False
+) -> Iterator[Path]:
     """
     Generator that opens all directories in an iterator for
     a specific file extension. This is useful for script cases where
@@ -41,24 +40,23 @@ def walk_paths(
     i = 0
     for ipath in paths:
         if ipath.is_file():
-            if ipath.suffix != f'.{file_ext}':
+            if ipath.suffix != f".{file_ext}":
                 raise ValueError(
-                    f'File {ipath} does not have the expected extension .{file_ext}')
+                    f"File {ipath} does not have the expected extension .{file_ext}"
+                )
             yield ipath
             i += 1
             if dev and i > 0:
                 break
         else:
-            for filepath in ipath.glob(f'**/*.{file_ext}'):
+            for filepath in ipath.glob(f"**/*.{file_ext}"):
                 yield filepath
                 i += 1
                 if dev and i > 0:
                     break
 
 
-def pydantic_to_markdown_schema(
-        model_class: type[BaseModel],
-        indent: int = 0) -> str:
+def pydantic_to_markdown_schema(model_class: type[BaseModel], indent: int = 0) -> str:
     """
     Generate a markdown-formatted schema description from a Pydantic model class.
 
@@ -101,12 +99,12 @@ def pydantic_to_markdown_schema(
         field_type = field_info.annotation
 
         # Get a clean string representation of the type
-        if hasattr(field_type, '__origin__'):
+        if hasattr(field_type, "__origin__"):
             # Handle generic types like Optional, Union, etc.
-            type_str = str(field_type).replace('typing.', '')
+            type_str = str(field_type).replace("typing.", "")
         else:
             # Handle regular types
-            type_str = getattr(field_type, '__name__', str(field_type))
+            type_str = getattr(field_type, "__name__", str(field_type))
 
         # Get the field description
         description = field_info.description or ""
@@ -117,9 +115,7 @@ def pydantic_to_markdown_schema(
             default_suffix = f" Default: {field_info.default!r}"
         elif field_info.default_factory is not None:
             factory_name = getattr(
-                field_info.default_factory,
-                "__name__",
-                repr(field_info.default_factory)
+                field_info.default_factory, "__name__", repr(field_info.default_factory)
             )
             default_suffix = f" Default factory: {factory_name}()"
 
@@ -129,7 +125,7 @@ def pydantic_to_markdown_schema(
             field_line += f": {description}"
         if default_suffix:
             if description:
-                if description.endswith('.'):
+                if description.endswith("."):
                     field_line += default_suffix
                 else:
                     field_line += f".{default_suffix}"
@@ -137,8 +133,7 @@ def pydantic_to_markdown_schema(
                 field_line += f":{default_suffix}"
 
         # If the field type is a Pydantic model, append its class docstring to the field line
-        if (isinstance(field_type, type) and
-                issubclass(field_type, BaseModel)):
+        if isinstance(field_type, type) and issubclass(field_type, BaseModel):
             nested_docstring = field_type.__doc__
             if nested_docstring:
                 nested_docstring = nested_docstring.strip()
@@ -153,12 +148,8 @@ def pydantic_to_markdown_schema(
         lines.append(field_line)
 
         # If the field type is a Pydantic model, recursively add its nested fields
-        if (isinstance(field_type, type) and
-                issubclass(field_type, BaseModel)):
-            nested_schema = pydantic_to_markdown_schema(
-                field_type,
-                indent=indent + 2
-            )
+        if isinstance(field_type, type) and issubclass(field_type, BaseModel):
+            nested_schema = pydantic_to_markdown_schema(field_type, indent=indent + 2)
             lines.append(nested_schema)
 
     return "\n".join(lines)
