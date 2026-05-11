@@ -17,18 +17,18 @@ class ParquetDataset(BaseModel):
     dataset_dir: DirectoryType
 
     def get_table_glob(self, table_name: str) -> Path:
-        if table_name.endswith('.parquet'):
+        if table_name.endswith(".parquet"):
             base_path = Path(self.dataset_dir) / table_name
         else:
-            base_path = Path(self.dataset_dir) / f'{table_name}.parquet'
+            base_path = Path(self.dataset_dir) / f"{table_name}.parquet"
         if base_path.is_file():
             return base_path
-        return base_path / '*.parquet'
+        return base_path / "*.parquet"
 
     def get_table_path(self, table_name: str) -> Path:
-        if table_name.endswith('.parquet'):
+        if table_name.endswith(".parquet"):
             return Path(self.dataset_dir) / table_name
-        return Path(self.dataset_dir) / f'{table_name}.parquet'
+        return Path(self.dataset_dir) / f"{table_name}.parquet"
 
 
 app = typer.Typer()

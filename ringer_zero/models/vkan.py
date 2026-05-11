@@ -631,3 +631,95 @@ def run_training(
 ):
     job = VKANTrainingJob.from_yaml(config)
     job.run()
+
+
+@app.command()
+def add_inference(
+    dataset_dir: Annotated[
+        Path,
+        typer.Option("--dataset-dir", help="Directory containing the parquet dataset"),
+    ],
+    results_dir: Annotated[
+        Path,
+        typer.Option(
+            "--results-dir",
+            help="Directory containing the training results to add inference to",
+        ),
+    ],
+    features_table: Annotated[
+        str,
+        typer.Option(
+            "--features-table",
+            help="Name of the table containing the features to run inference on",
+        ),
+    ],
+    kfold_table: Annotated[
+        str,
+        typer.Option(
+            "--kfold-table",
+            help="Name of the kfold table used during training and to select validation samples",
+        ),
+    ],
+    inference_table: Annotated[
+        str,
+        typer.Option(
+            "--inference-table", help="Name of the table to save the inference results"
+        ),
+    ],
+    eta_col: Annotated[
+        str, typer.Option("--eta-col", help="Name of the eta column in the data table")
+    ] = "trig_L2_calo_eta",
+    et_col: Annotated[
+        str, typer.Option("--et-col", help="Name of the et column in the data table")
+    ] = "trig_L2_calo_et",
+    rings_col: Annotated[
+        str,
+        typer.Option("--rings-col", help="Name of the rings column in the data table"),
+    ] = "trig_L2_calo_rings",
+    label_col: Annotated[
+        str,
+        typer.Option("--label-col", help="Name of the label column in the kfold table"),
+    ] = "label",
+    fold_col: Annotated[
+        str,
+        typer.Option("--fold-col", help="Name of the fold column in the kfold table"),
+    ] = "kfold",
+    device: Annotated[
+        str, typer.Option("--device", help="Torch device to run inference on")
+    ] = "cpu",
+    clear_cuda_cache: Annotated[
+        bool, typer.Option("--clear-cuda-cache", help="Clear CUDA cache between models")
+    ] = True,
+    show_progress: Annotated[
+        bool, typer.Option("--show-progress", help="Show progress bar during inference")
+    ] = True,
+):
+    """Run inference for VKAN trained models and save predictions to a parquet table."""
+    results_dir = Path(results_dir)
+    results_dir.mkdir(parents=True, exist_ok=True)
+
+    output_df = model_inference(
+        model_path=results_dir,
+        dataset_dir=dataset_dir,
+        data_table=features_table,
+        kfold_table=kfold_table,
+        et_col=et_col,
+        eta_col=eta_col,
+        rings_col=rings_col,
+        label_col=label_col,
+        fold_col=fold_col,
+        device=device,
+        clear_cuda_cache=clear_cuda_cache,
+        show_progress=show_progress,
+    )
+
+    parquet_dataset = ParquetDataset(dataset_dir=dataset_dir)
+    pred_pl = pl.from_pandas(output_df)
+    pred_pl.write_parquet(
+        pl.PartitionBy(
+            str(parquet_dataset.get_table_path(inference_table)),
+            max_rows_per_file=100_000,
+        ),
+        compression="snappy",
+    )
+    return output_df
