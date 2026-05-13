@@ -1,4 +1,4 @@
-# ringer-zero
+# neuralnet
 Repo with code for developing the ringer model for L0 trigger in the ATLAS Experiment.
 
 # Setup
@@ -83,19 +83,19 @@ python cli.py vqat run-training --help
 
 ## 2) Run training
 
-If you want to train with other models, check availabilty or implement at [models](./ringer_zero/models/) and use:
+If you want to train with other models, check availabilty or implement at [models](./neuralnet/models/) and use:
 ```bash
 python cli.py your_model run-training --config configs/your_model_config.yaml
 ```
 
 ### Available Models
 
-- [vQAT (Quantization Aware Training)](./ringer_zero/models/vqat.py)
+- [vQAT (Quantization Aware Training)](./neuralnet/models/vqat.py)
 ```bash
 python cli.py vqat run-training --config configs/vqat_training_job.yaml
 ```
 
-- [vKAN (Kolmogorov–Arnold Networks)](./ringer_zero/models/vkan.py)
+- [vKAN (Kolmogorov–Arnold Networks)](./neuralnet/models/vkan.py)
 ```bash
 python cli.py vkan run-training --config configs/vkan_training_job.yaml
 ```

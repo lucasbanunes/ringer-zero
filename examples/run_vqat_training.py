@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from ringer_zero.models.vqat import run_training
+from neuralnet.models.vqat import run_training
 
 
 def run_vqat_training(

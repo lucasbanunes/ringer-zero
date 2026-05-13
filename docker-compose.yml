@@ -1,13 +1,13 @@
-name: ringer-zero
+name: neuralnet
 services:
   boosted-lorenzetti:
     build:
       context: .
       dockerfile: Dockerfile
-    image: ${DOCKER_USERNAME}/ringer-zero:${DOCKER_TAG}
-    container_name: ringer-zero-container-${DOCKER_TAG}
+    image: ${DOCKER_USERNAME}/neuralnet:${DOCKER_TAG}
+    container_name: neuralnet-container-${DOCKER_TAG}
     volumes:
-      - ./:/root/workspaces/ringer-zero
+      - ./:/root/workspaces/neuralnet
       - ~/logs:/root/logs
       - ~/data:/root/data
     tty: true

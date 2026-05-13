@@ -2,9 +2,9 @@ name: Tests
 
 on:
   push:
-    branches: [ main ]
+    branches: [ master ]
   pull_request:
-    branches: [ main ]
+    branches: [ master ]
 
 jobs:
   test:
@@ -19,7 +19,9 @@ jobs:
       - name: Set up Conda
         uses: conda-incubator/setup-miniconda@v3
         with:
-          auto-activate-base: true
+          auto-activate: true
+          activate-environment: base
+          channels: defaults
           python-version: ${{ matrix.python-version }}
           miniconda-version: "latest"
 
