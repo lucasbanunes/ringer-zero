@@ -7,10 +7,18 @@ et_col: TrigEMClusterContainer.et
 et_bins:
     - 15000.0
     - 20000.0
+    - 30000.0
+    - 40000.0
+    - 50000.0
+    - .inf
 eta_col: TrigEMClusterContainer.eta
 eta_bins:
     - 0.0
     - 0.8
+    - 1.37
+    - 1.54
+    - 2.37
+    - 2.5
 tag: vqat
 b0: 22
 i0: 7
