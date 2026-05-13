@@ -9,7 +9,7 @@ from neuralnet.models.vqat import VQATTrainingJob, add_inference
 def test_vqat_pipeline_from_yaml(test_data_dir: Path):
     dataset_dir = test_data_dir / "test_dataset"
     training_dir = dataset_dir / "training" / "vqat"
-    inference_dir = dataset_dir / "inference"
+    inference_dir = dataset_dir / "inference" / "vqat"
     if training_dir.exists():
         shutil.rmtree(training_dir)
     if inference_dir.exists():
