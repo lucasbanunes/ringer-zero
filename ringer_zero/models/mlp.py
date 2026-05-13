@@ -62,9 +62,12 @@ def get_ring_slices_per_layer(fraction: int) -> list[int]:
 
 
 def get_model() -> Sequential:
+    from keras import Input
+
     model = Sequential(
         [
-            Dense(5, activation="relu", input_shape=(50,)),
+            Input(shape=(50,)),
+            Dense(5, activation="relu"),
             Dense(1, activation="sigmoid"),
         ]
     )

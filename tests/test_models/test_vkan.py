@@ -1,6 +1,4 @@
-import logging
 from pathlib import Path
-from tempfile import TemporaryDirectory
 import polars as pl
 
 from ringer_zero.datasets import ParquetDataset
@@ -8,27 +6,28 @@ from ringer_zero.models.vkan import VKANTrainingJob, add_inference
 
 
 def test_vkan_pipeline_from_yaml(test_data_dir: Path):
-    with TemporaryDirectory() as output_dir:
-        logging.info(f"Saving results to {output_dir}")
-        dataset_dir = test_data_dir / "test_dataset"
-        output_dir = Path(output_dir)
+    dataset_dir = test_data_dir / "test_dataset"
+    training_dir = dataset_dir / "training" / "vkan"
+    training_dir.mkdir(parents=True, exist_ok=True)
 
-        job = VKANTrainingJob.from_yaml(
-            test_data_dir / "vkan_training_job.yaml",
-            output_dir=output_dir,
-            dataset_dir=dataset_dir,
-        )
-        job.run()
+    job = VKANTrainingJob.from_yaml(
+        test_data_dir / "vkan_training_job.yaml",
+        output_dir=training_dir,
+        dataset_dir=dataset_dir,
+    )
+    job.run()
 
-        add_inference(
-            results_dir=output_dir,
-            dataset_dir=dataset_dir,
-            features_table=job.data_table,
-            inference_table="vkan_inference_results",
-        )
+    add_inference(
+        results_dir=training_dir,
+        dataset_dir=dataset_dir,
+        features_table=job.data_table,
+        inference_table="inference/vkan_inference_results",
+    )
 
-        dataset = ParquetDataset(dataset_dir=dataset_dir)
-        inference_df = pl.read_parquet(dataset.get_table_path("vkan_inference_results"))
+    dataset = ParquetDataset(dataset_dir=dataset_dir)
+    inference_df = pl.read_parquet(
+        dataset.get_table_path("inference/vkan_inference_results")
+    )
 
-        assert "output" in inference_df.columns
-        assert len(inference_df) > 0
+    assert "output" in inference_df.columns
+    assert len(inference_df) > 0

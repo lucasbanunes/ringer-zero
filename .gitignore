@@ -2,6 +2,8 @@
 /results
 /configs
 /logs
+tests/data/test_dataset/inference/
+tests/data/test_dataset/training/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

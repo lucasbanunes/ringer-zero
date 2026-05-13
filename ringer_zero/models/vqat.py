@@ -74,9 +74,12 @@ def get_model(b0: int, i0: int) -> Sequential:
         bc=Constant(b0),
         ic=Constant(i0),
     ):
+        from keras import Input
+
         model = Sequential(
             [
-                qlayers.QDense(5, activation="relu", input_shape=(50,), iq_conf=None),
+                Input(shape=(50,)),
+                qlayers.QDense(5, activation="relu", iq_conf=None),
                 qlayers.QDense(1, activation="sigmoid"),
             ]
         )
