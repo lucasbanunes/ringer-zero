@@ -76,7 +76,7 @@ def pydantic_to_markdown_schema(model_class: type[BaseModel], indent: int = 0) -
 
     Examples
     --------
-    >>> from ringer_zero.models.vqat import VQATTrainingJob
+    >>> from neuralnet.models.vqat import VQATTrainingJob
     >>> schema = pydantic_to_markdown_schema(VQATTrainingJob)
     >>> print(schema)
     """

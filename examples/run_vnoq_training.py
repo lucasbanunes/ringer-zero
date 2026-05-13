@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from ringer_zero.models.vnoq0 import run_training
+from neuralnet.models.vnoq0 import run_training
 
 
 def run_vnoq0_training(output_path: Path, datapath: str, ref: str, et: int, eta: int):

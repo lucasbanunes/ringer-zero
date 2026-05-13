@@ -1,8 +1,8 @@
 from pathlib import Path
 import polars as pl
 
-from ringer_zero.datasets import ParquetDataset
-from ringer_zero.models.mlp import MLPTrainingJob, add_inference
+from neuralnet.datasets import ParquetDataset
+from neuralnet.models.mlp import MLPTrainingJob, add_inference
 
 
 def test_mlp_pipeline_from_yaml(test_data_dir: Path):

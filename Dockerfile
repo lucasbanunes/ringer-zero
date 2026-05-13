@@ -21,7 +21,7 @@ RUN bash /tmp/miniconda3.sh -b -p /opt/conda && \
     /opt/conda/bin/conda init bash && \
     /opt/conda/bin/conda config --set auto_activate_base false && \
     /opt/conda/bin/conda config --set channel_priority strict && \
-    /opt/conda/bin/conda create -c conda-forge --name ringer-zero root==6.36.06 python==3.12.12 -y && \
-    /opt/conda/bin/conda run -n ringer-zero --live-stream pip install -r requirements.txt && \
+    /opt/conda/bin/conda create -c conda-forge --name neuralnet root==6.36.06 python==3.12.12 -y && \
+    /opt/conda/bin/conda run -n neuralnet --live-stream pip install -r requirements.txt && \
     rm requirements.txt
 ENV PATH="/opt/conda/bin:${PATH}"

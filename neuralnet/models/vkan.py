@@ -11,9 +11,9 @@ import torch
 import typer
 import yaml
 
-from ringer_zero import get_logger
-from ringer_zero.datasets import ParquetDataset
-from ringer_zero.torch import training_torch
+from neuralnet import get_logger
+from neuralnet.datasets import ParquetDataset
+from neuralnet.torch import training_torch
 from ..torch.inference import model_inference as generic_inference
 from ..submitit import ExecutorConfig
 from ..utils import pydantic_to_markdown_schema
