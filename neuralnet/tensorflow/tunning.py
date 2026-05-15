@@ -28,11 +28,9 @@ except Exception:
     raise
 
 from .callbacks import SP
+from ..datasets import RefType
 from ..decorators import Summary, Reference
 from .. import check_batch_size, class_weight, logger
-
-
-type RefType = dict[str, dict[str, dict[str, float]]]
 
 
 class MetadataDict(TypedDict):
