@@ -8,6 +8,27 @@ import torch.optim as optim
 from torch.utils.data import TensorDataset, DataLoader
 from datetime import datetime
 from .callbacks import EarlyStoppingCheckpoint, compute_sp
+from ..decorators import Summary, Reference
+
+
+class TorchModelWrapper:
+    def __init__(self, model: nn.Module, device: torch.device):
+        self.model = model
+        self.device = device
+
+    def predict(
+        self, x: np.ndarray, batch_size: int = 1024, verbose: int = 0
+    ) -> np.ndarray:
+        self.model.eval()
+        x_tensor = torch.tensor(x, dtype=torch.float32, device=self.device)
+        dataset = TensorDataset(x_tensor)
+        loader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
+        preds = []
+        with torch.no_grad():
+            for (batch_x,) in loader:
+                outputs = self.model(batch_x)
+                preds.append(torch.sigmoid(outputs).cpu().numpy())
+        return np.vstack(preds)
 
 
 def training_torch(
@@ -27,6 +48,7 @@ def training_torch(
     patience: int = 25,
     verbose: bool = True,
     dry_run: bool = False,
+    ref: dict | None = None,
     **kwargs,
 ):
     output_dir = output_dir + "/tuned.%s.sort_%d.init_%d.model" % (tag, sort, init)
@@ -130,11 +152,22 @@ def training_torch(
     end_time = datetime.now()
 
     early_stopping.restore_best(model=model, device=device)
-
     torch.save(model.state_dict(), f"{output_dir}/model_weights.pth")
 
     history["patience"] = patience
     history["epochs"] = len(history["loss"])
+
+    wrapped_model = TorchModelWrapper(model, device)
+    decorators = [Summary(detailed=False)]
+
+    if ref is not None and len(ref) > 0:
+        decorators.append(Reference(ref))
+
+    for decorator in decorators:
+        decorator(
+            history,
+            {"model": wrapped_model, "data": (X, y), "data_val": (X_val, y_val)},
+        )
 
     output_data = {
         "history": history,

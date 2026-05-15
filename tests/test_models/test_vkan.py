@@ -35,5 +35,5 @@ def test_vkan_pipeline_from_yaml(test_data_dir: Path):
         dataset.get_table_path("inference/vkan_inference_results")
     )
 
-    assert "output" in inference_df.columns
+    assert "prediction" in inference_df.columns
     assert len(inference_df) > 0
