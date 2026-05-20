@@ -19,6 +19,8 @@ from .. import get_logger
 from ..datasets import ParquetDataset
 from ..submitit import ExecutorConfig
 from ..utils import pydantic_to_markdown_schema
+from ..pydantic import YamlModel
+from ..quantization.uniform import uniform_quantization_layer
 
 
 def get_ring_slices_per_layer(fraction: int) -> list[int]:
@@ -123,6 +125,15 @@ class VariableBin(BaseModel):
             return self.lower < value < self.upper
 
 
+type WeightBitsType = Annotated[
+    int, Field(description="Number of bits to quantize the weights to")
+]
+
+type WeightIntegerBitsType = Annotated[
+    int, Field(description="Number of integer bits to quantize the weights to")
+]
+
+
 class BinnedKerasModel(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -166,8 +177,21 @@ class BinnedKerasModel(BaseModel):
         prediction = self.model.predict(data)
         return prediction.flatten()
 
+    def uniform_quantization(self, bits: WeightBitsType, integer_bits: WeightIntegerBitsType) -> 'BinnedKerasModel':
+        quantized_model = Sequential(
+            name=f'quantized_{self.model.name}'
+        )
+        for layer in self.model.layers:
+            quantized_layer = uniform_quantization_layer(layer, bits=bits, integer_bits=integer_bits)
+            quantized_model.add(quantized_layer)
+        return BinnedKerasModel(
+            bins=self.bins,
+            features=self.features,
+            model=quantized_model
+        )
 
-class BinnedKerasMoE(BaseModel):
+
+class BinnedKerasExpertCommittee(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     models: list[BinnedKerasModel]
@@ -209,6 +233,16 @@ class BinnedKerasMoE(BaseModel):
             filtered = filtered.with_columns(pl.Series(prediction).alias("prediction"))
             prediction_df.append(filtered)
         return pl.concat(prediction_df)
+
+    def uniform_quantization(
+        self,
+        bits: WeightBitsType,
+        integer_bits: WeightIntegerBitsType
+    ) -> 'BinnedKerasExpertCommittee':
+        quantized_models = [
+            model.uniform_quantization(bits, integer_bits) for model in self.models
+        ]
+        return BinnedKerasExpertCommittee(models=quantized_models)
 
 
 class MLPTrainingJob(BaseModel):
@@ -515,7 +549,7 @@ class MLPTrainingJob(BaseModel):
     @staticmethod
     def load_model(
         results_dir: Path, eta_col: str, et_col: str, rings_col: str
-    ) -> tuple[pl.DataFrame, pl.DataFrame, BinnedKerasMoE]:
+    ) -> tuple[pl.DataFrame, pl.DataFrame, BinnedKerasExpertCommittee]:
         results = []
         logger = get_logger()
         expected_cols = {
@@ -652,7 +686,7 @@ class MLPTrainingJob(BaseModel):
                 model=row["model"],
             )
             models.append(model)
-        selected_model = BinnedKerasMoE(models=models)
+        selected_model = BinnedKerasExpertCommittee(models=models)
         return results, best_models, selected_model
 
 
@@ -661,18 +695,20 @@ app = typer.Typer(help="Ringer Zero MLP commands", rich_markup_mode="markdown")
 
 RUN_TRAINING_HELP = "Run MLP training jobs"
 
+type ConfigType = Annotated[
+    Path,
+    typer.Option(
+        description="Path to the YAML configuration this command"
+    )
+]
+
 
 @app.command(
     short_help=RUN_TRAINING_HELP,
     help=f"**{RUN_TRAINING_HELP}**\n\n{pydantic_to_markdown_schema(MLPTrainingJob)}",
 )
 def run_training(
-    config: Annotated[
-        Path,
-        typer.Option(
-            "--config", help="Path to the YAML configuration file for the training job"
-        ),
-    ],
+    config: ConfigType
 ):
     job = MLPTrainingJob.from_yaml(config)
     job.run()
@@ -733,3 +769,82 @@ def add_inference(
         compression="snappy",
     )
     return prediction_df
+
+
+type DatasetDirType = Annotated[
+    Path,
+    Field(description="Directory containing the parquet dataset"),
+]
+
+type ResultsDirType = Annotated[
+    Path,
+    Field(description="Directory containing the training results to load the model from")
+]
+
+type FeaturesTableType = Annotated[
+    str,
+    Field(description="Name of the table containing the features to run inference on"),
+]
+
+type InferenceTableType = Annotated[
+    str,
+    Field(description="Name of the table to save the inference results"),
+]
+
+type EtaColType = Annotated[
+    str, Field(description="Name of the eta column in the features table")
+]
+
+type EtColType = Annotated[
+    str, Field(description="Name of the et column in the features table")
+]
+
+type RingsColType = Annotated[
+    str, Field(description="Name of the rings column in the features table")
+]
+
+class MLPUniformPTQInference(YamlModel):
+    dataset_dir: DatasetDirType
+    results_dir: ResultsDirType
+    features_table: FeaturesTableType
+    inference_table: InferenceTableType
+    eta_col: EtaColType = "TrigEMClusterContainer.eta"
+    et_col: EtColType = "TrigEMClusterContainer.et"
+    rings_col: RingsColType = "TrigEMClusterContainer.ringsE"
+    bits: WeightBitsType = 8
+    integer_bits: WeightIntegerBitsType = 4
+
+    def run(self):
+        results, best_models, loaded_model = MLPTrainingJob.load_model(
+            self.results_dir, self.eta_col, self.et_col, self.rings_col
+        )
+        uniform_quantization_model = loaded_model.uniform_quantization(bits=self.bits, integer_bits=self.integer_bits)
+        results.write_parquet(self.results_dir / "all_results.parquet")
+        best_models.write_parquet(self.results_dir / "best_models.parquet")
+        results.clear()  # Frees memory premptively
+        best_models.clear()  # Frees memory premptively
+        parquet_dataset = ParquetDataset(dataset_dir=self.dataset_dir)
+        features_df = pl.scan_parquet(parquet_dataset.get_table_glob(self.features_table))
+        prediction_df = uniform_quantization_model.predict(features_df)
+        prediction_df.write_parquet(
+            pl.PartitionBy(
+                str(parquet_dataset.get_table_path(self.inference_table)),
+                max_rows_per_file=100_000,
+            ),
+            compression="snappy",
+        )
+        return prediction_df
+
+
+ADD_UNIFORM_PTQ_INFERENCE_HELP = "Add uniform PTQ inference results to the dataset"
+
+@app.command(
+    short_help=ADD_UNIFORM_PTQ_INFERENCE_HELP,
+    help=f'**{ADD_UNIFORM_PTQ_INFERENCE_HELP}**\n\n{pydantic_to_markdown_schema(MLPUniformPTQInference)}',
+)
+def add_uniform_ptq_inference(
+    config: ConfigType
+) -> MLPUniformPTQInference:
+    job = MLPUniformPTQInference.from_yaml(config)
+    job.run()
+    return job

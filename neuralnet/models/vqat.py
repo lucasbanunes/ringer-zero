@@ -228,7 +228,7 @@ class BinnedKerasModel(BaseModel):
         return prediction.flatten()
 
 
-class BinnedKerasMoE(BaseModel):
+class BinnedKerasExpertCommittee(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     models: list[BinnedKerasModel]
@@ -583,7 +583,7 @@ class VQATTrainingJob(BaseModel):
     @staticmethod
     def load_model(
         results_dir: Path, eta_col: str, et_col: str, rings_col: str
-    ) -> tuple[pl.DataFrame, pl.DataFrame, BinnedKerasMoE]:
+    ) -> tuple[pl.DataFrame, pl.DataFrame, BinnedKerasExpertCommittee]:
         results = []
         logger = get_logger()
         expected_cols = {
@@ -720,7 +720,7 @@ class VQATTrainingJob(BaseModel):
                 model=row["model"],
             )
             models.append(model)
-        selected_model = BinnedKerasMoE(models=models)
+        selected_model = BinnedKerasExpertCommittee(models=models)
         return results, best_models, selected_model
 
 

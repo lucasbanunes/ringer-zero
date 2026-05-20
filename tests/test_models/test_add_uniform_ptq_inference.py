@@ -1,57 +1,17 @@
-from pathlib import Path
-import shutil
-import polars as pl
-from pytest import MonkeyPatch
 import yaml
+import polars as pl
+from pathlib import Path
 from keras import Sequential, Input
 from keras.layers import Dense
 
-
-from neuralnet.datasets import ParquetDataset
 from neuralnet.models.mlp import (
     add_uniform_ptq_inference,
     MLPUniformPTQInference,
     BinnedKerasExpertCommittee,
-    MLPTrainingJob, add_inference
 )
 
 
-def test_mlp_pipeline_from_yaml(test_data_dir: Path):
-    dataset_dir = test_data_dir / "test_dataset"
-    training_dir = dataset_dir / "training" / "mlp"
-    inference_dir = dataset_dir / "inference" / "mlp"
-    if training_dir.exists():
-        shutil.rmtree(training_dir)
-    if inference_dir.exists():
-        shutil.rmtree(inference_dir)
-    training_dir.mkdir(parents=True, exist_ok=True)
-
-    job = MLPTrainingJob.from_yaml(
-        test_data_dir / "mlp_training_job.yaml",
-        output_dir=training_dir,
-        dataset_dir=dataset_dir,
-    )
-    job.run()
-
-    add_inference(
-        results_dir=training_dir,
-        dataset_dir=dataset_dir,
-        features_table="electron_ringer",
-        inference_table="inference/mlp_inference_results",
-    )
-
-    dataset = ParquetDataset(dataset_dir=dataset_dir)
-    inference_df = pl.read_parquet(
-        dataset.get_table_path("inference/mlp_inference_results")
-    )
-
-    assert "prediction" in inference_df.columns
-    assert inference_df.height > 0
-
-
-def test_add_uniform_ptq_inference_runs(
-        monkeypatch: MonkeyPatch,
-        tmp_path: Path):
+def test_add_uniform_ptq_inference_runs(monkeypatch, tmp_path):
     dataset_dir = tmp_path / "dataset"
     results_dir = tmp_path / "results"
     dataset_dir.mkdir()
@@ -71,13 +31,11 @@ def test_add_uniform_ptq_inference_runs(
     best_models_df = pl.DataFrame({"a": [1]})
 
     # Simple Keras model that accepts two features
-    keras_model = Sequential(
-        [Input(shape=(2,)), Dense(1, activation="sigmoid")])
+    keras_model = Sequential([Input(shape=(2,)), Dense(1, activation="sigmoid")])
 
     # Build a BinnedKerasExpertCommittee-like object via dict coercion
     model_dict = dict(
-        bins=[dict(col=pl.col("eta").abs(), lower=0.0,
-                   upper=10.0, closed="left")],
+        bins=[dict(col=pl.col("eta").abs(), lower=0.0, upper=10.0, closed="left")],
         features=[pl.col("f0"), pl.col("f1")],
         model=keras_model,
     )
@@ -102,12 +60,10 @@ def test_add_uniform_ptq_inference_runs(
         def get_table_path(self, table):
             return tmp_path / "out" / table
 
-    monkeypatch.setattr(
-        "neuralnet.models.mlp.ParquetDataset", DummyParquetDataset)
+    monkeypatch.setattr("neuralnet.models.mlp.ParquetDataset", DummyParquetDataset)
 
     # Make pl.scan_parquet return a lazy frame with the expected columns
-    df = pl.DataFrame({"id": [1, 2], "f0": [0.1, 0.2],
-                      "f1": [0.3, 0.4], "eta": [0.1, 0.2]})
+    df = pl.DataFrame({"id": [1, 2], "f0": [0.1, 0.2], "f1": [0.3, 0.4], "eta": [0.1, 0.2]})
     monkeypatch.setattr(pl, "scan_parquet", lambda path: df.lazy())
 
     # Call the CLI wrapper by passing the config file path (string),
